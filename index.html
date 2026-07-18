@@ -58,17 +58,14 @@
             </div>
             
             <div class="flex items-center gap-2">
-                <!-- Tombol Panduan (Guide) -->
                 <button onclick="showTutorial(true)" class="flex items-center justify-center w-9 h-9 md:w-auto md:px-3 md:py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600" title="Panduan">
                     <i class="fa-solid fa-circle-question text-blue-600 dark:text-blue-400"></i> <span class="hidden md:inline ml-1 font-bold" data-i18n="btnGuide">Panduan</span>
                 </button>
                 
-                <!-- Tombol Dark Mode -->
                 <button onclick="toggleDarkMode()" id="darkModeBtn" class="flex items-center justify-center w-9 h-9 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600">
                     <i class="fa-solid fa-moon text-slate-600 dark:text-slate-300"></i>
                 </button>
 
-                <!-- Tombol Ganti Bahasa -->
                 <button onclick="toggleLanguage()" class="flex items-center justify-center w-9 h-9 md:w-auto md:px-3 md:py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600">
                     <i class="fa-solid fa-globe text-blue-600 dark:text-blue-400"></i> <span id="langDisplay" class="hidden md:inline ml-1">EN</span>
                 </button>
@@ -263,13 +260,13 @@
         </div>
     </div>
 
-    <!-- LOGIKA JAVASCRIPT (DIUBAH MENJADI TYPE="MODULE") -->
+    <!-- LOGIKA JAVASCRIPT -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
         // Inisialisasi Supabase
-        const supabaseUrl = CONFIG_APP.supabaseUrl || 'https://placeholder.supabase.co';
-        const supabaseKey = CONFIG_APP.supabaseKey || 'placeholder';
+        const supabaseUrl = typeof CONFIG_APP !== 'undefined' && CONFIG_APP.supabaseUrl ? CONFIG_APP.supabaseUrl : 'placeholder';
+        const supabaseKey = typeof CONFIG_APP !== 'undefined' && CONFIG_APP.supabaseKey ? CONFIG_APP.supabaseKey : 'placeholder';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         const ITEMS_PER_PAGE = 200; 
@@ -357,7 +354,6 @@
             }
         };
 
-        // EXPOSE KE WINDOW AGAR BISA DIPANGGIL HTML
         window.toggleDarkMode = function() {
             const html = document.documentElement;
             html.classList.toggle('dark');
@@ -407,7 +403,10 @@
         let touchendX = 0;
         let hasSeenTutorial = false; 
 
-        document.addEventListener("DOMContentLoaded", () => {
+        // ==========================================
+        // INISIALISASI APLIKASI (AMAN UNTUK MODULE)
+        // ==========================================
+        function initPortal() {
             updateDarkModeIcon(document.documentElement.classList.contains('dark'));
 
             if (typeof CONFIG_APP !== 'undefined') {
@@ -419,7 +418,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const urlName = urlParams.get('n');
             const urlKuota = urlParams.get('k');
-            const autoId = urlParams.get('i');
+            const autoId = urlParams.get('i'); // ID Folder Drive
 
             if (urlName) {
                 appState.clientName = decodeURIComponent(urlName).replace(/-/g, ' ');
@@ -450,8 +449,10 @@
             }
 
             if (autoId) {
+                console.log("-> ID Drive terdeteksi dari Link URL:", autoId);
                 document.getElementById('driveLink').value = `https://drive.google.com/drive/folders/${autoId}`;
                 document.getElementById('inputSection').classList.add('hidden');
+                
                 setTimeout(() => { window.loadFromDrive(); }, 500);
             } else {
                 document.getElementById('inputSection').classList.remove('hidden');
@@ -470,7 +471,14 @@
             }, { passive: true });
             
             applyTranslations(); 
-        });
+        }
+
+        // PENGECEKAN STATUS DOKUMEN AGAR TIDAK TERLEWAT
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPortal);
+        } else {
+            initPortal();
+        }
 
         window.showTutorial = function(forceManual = false) {
             if (hasSeenTutorial && !forceManual) return;
@@ -511,23 +519,33 @@
             if (!appState.folderId) return;
             const dataToSave = { selected: Array.from(appState.selectedIds), notes: appState.notes };
             
+            console.log("-> Menyimpan data ke Supabase...", dataToSave);
+
             const { error } = await supabase
                 .from('portal_sessions')
                 .upsert({ folder_id: appState.folderId, client_data: dataToSave });
 
-            if (error) console.error("Gagal menyimpan ke awan:", error);
+            if (error) {
+                console.error("-> GAGAL menyimpan ke Supabase:", error);
+            } else {
+                console.log("-> BERHASIL tersimpan ke Supabase!");
+            }
         };
 
         // FUNGSI SUPABASE: LOAD PROGRESS (FETCH + SUBSCRIBE)
         window.loadProgress = async function(folderId) {
-            // Ambil data pertama
+            console.log("-> Mencoba menarik riwayat seleksi klien dari Supabase...");
+            
             const { data, error } = await supabase
                 .from('portal_sessions')
                 .select('client_data')
                 .eq('folder_id', folderId)
                 .single();
 
-            if (data && data.client_data) {
+            if (error) {
+                console.log("-> Belum ada riwayat seleksi sebelumnya atau tabel kosong.");
+            } else if (data && data.client_data) {
+                console.log("-> Riwayat seleksi ditemukan!", data.client_data);
                 appState.selectedIds = new Set(data.client_data.selected || []);
                 appState.notes = data.client_data.notes || {};
                 if (appState.photos.length > 0) {
@@ -536,13 +554,13 @@
                 }
             }
 
-            // Langganan pembaruan realtime
             supabase.channel('custom-update-channel')
                 .on('postgres_changes',
                     { event: '*', schema: 'public', table: 'portal_sessions', filter: `folder_id=eq.${folderId}` },
                     (payload) => {
                         const newData = payload.new.client_data;
                         if (newData) {
+                            console.log("-> Sinkronisasi Real-time diterima dari perangkat lain!", newData);
                             appState.selectedIds = new Set(newData.selected || []);
                             appState.notes = newData.notes || {};
                             
@@ -567,7 +585,6 @@
                     card.classList.remove('selected', 'border-slate-900', 'dark:border-blue-400');
                 }
                 
-                // Update badge catatan
                 let badge = card.querySelector('.note-badge');
                 if (appState.notes[photoId]) {
                     if (!badge) {
@@ -725,7 +742,7 @@
                 const globalIndex = appState.photos.findIndex(p => p.id === photo.id); 
                 const card = document.createElement('div');
                 card.className = `photo-card relative bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden aspect-square border-[3px] border-transparent shadow-sm hover:shadow-md ${appState.selectedIds.has(photo.id) ? 'selected border-slate-900 dark:border-blue-400' : ''}`;
-                card.setAttribute('data-photo-id', photo.id); // PENTING UNTUK SUPABASE
+                card.setAttribute('data-photo-id', photo.id);
                 
                 const img = document.createElement('img');
                 img.src = photo.url; img.className = "w-full h-full object-cover cursor-pointer transition-transform duration-300"; img.loading = "lazy";
