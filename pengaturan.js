@@ -5,6 +5,6 @@ const CONFIG_APP = {
     whatsappAdmin: "6282117102831",[cite: 1]
 
     // Konfigurasi Supabase
-    supabaseUrl: "https://ihqafpnqmlhewwyatiau.supabase.co/rest/v1/",
+    supabaseUrl: "https://ihqafpnqmlhewwyatiau.supabase.co",
     supabaseKey: "sb_publishable_ClY-tvZnSpQqrpG2I9a2fA_q6cRhAdC"
 };
