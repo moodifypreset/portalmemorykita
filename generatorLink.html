@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Auto Link Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+    </style>
+</head>
+<body class="text-slate-800 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white max-w-xl w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+        <div class="bg-slate-900 px-6 py-5 flex items-center gap-4">
+            <div class="bg-white/20 text-white w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-inner">
+                <i class="fa-solid fa-link"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-white text-lg">Secure Link Generator</h1>
+                <p class="text-slate-400 text-xs font-medium uppercase tracking-wider">With Quota Hashing & WA Direct</p>
+            </div>
+        </div>
+
+        <div class="p-6 md:p-8 space-y-5">
+            
+            <div class="hidden">
+                <input type="text" id="baseUrl">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <!-- Kolom Nama -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Nama Klien (Opsional)</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-user-tag text-slate-400"></i>
+                        </div>
+                        <input type="text" id="clientName" placeholder="Cth: Deni Maria"
+                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-blue-600 outline-none transition text-sm">
+                    </div>
+                </div>
+
+                <!-- Kolom WA Klien -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">No. WA Klien (Opsional)</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fa-brands fa-whatsapp text-slate-400"></i>
+                        </div>
+                        <input type="number" id="clientPhone" placeholder="Cth: 08123456..."
+                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-blue-600 outline-none transition text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-2">Link Google Drive Asli</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fa-brands fa-google-drive text-slate-400"></i>
+                    </div>
+                    <input type="text" id="driveLink" placeholder="Paste link folder di sini..."
+                        class="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-blue-600 outline-none transition text-sm">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-2">Batas Kuota Foto (Opsional)</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-shield-halved text-slate-400"></i>
+                    </div>
+                    <input type="number" id="kuota" placeholder="Contoh: 100 (Bisa dikosongkan)"
+                        class="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-blue-600 outline-none transition text-sm">
+                </div>
+            </div>
+
+            <button onclick="generateLink()" class="w-full py-4 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Buat Link Terenkripsi
+            </button>
+
+            <!-- KOTAK HASIL -->
+            <div id="resultBox" class="hidden mt-4 bg-green-50 border border-green-200 rounded-xl p-4 transition-all">
+                <span class="text-xs font-bold text-green-700 uppercase tracking-wider mb-2 block">Link Siap Dikirim!</span>
+                <textarea id="finalUrl" readonly class="w-full bg-white border border-green-200 rounded-lg p-3 text-sm text-slate-700 outline-none resize-none h-24 font-mono font-medium shadow-inner"></textarea>
+                
+                <!-- Dua Tombol Aksi -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                    <button onclick="copyToClipboard()" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold rounded-xl transition flex justify-center items-center gap-2 shadow-md">
+                        <i class="fa-solid fa-copy"></i> Salin Teks
+                    </button>
+                    <button id="btnSendWA" onclick="sendToClientWA()" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition flex justify-center items-center gap-2 shadow-md">
+                        <i class="fa-brands fa-whatsapp text-lg"></i> Kirim ke Klien
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="customAlert" class="fixed top-4 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 transition-all duration-300 transform -translate-y-32 opacity-0">
+        <i id="alertIcon" class="fa-solid fa-circle-check text-green-400"></i>
+        <span id="alertText" class="text-sm font-bold">Teks tersalin!</span>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            let currentUrl = window.location.href.split('?')[0].split('#')[0];
+            let portalUrl = currentUrl.includes("generatorLink.html") ? currentUrl.replace("generatorLink.html", "") : currentUrl.substring(0, currentUrl.lastIndexOf("/") + 1);
+            document.getElementById('baseUrl').value = portalUrl;
+        });
+
+        function showAlert(message, isError = false) {
+            const alertBox = document.getElementById('customAlert');
+            const alertIcon = document.getElementById('alertIcon');
+            document.getElementById('alertText').textContent = message;
+            alertIcon.className = isError ? "fa-solid fa-triangle-exclamation text-red-400" : "fa-solid fa-circle-check text-green-400";
+            alertBox.classList.remove('-translate-y-32', 'opacity-0');
+            setTimeout(() => alertBox.classList.add('-translate-y-32', 'opacity-0'), 3000);
+        }
+
+        function extractFolderId(url) {
+            const match = url.match(/folders\/([a-zA-Z0-9-_]+)/);
+            if (match && match[1]) return match[1];
+            const matchId = url.match(/id=([a-zA-Z0-9-_]+)/);
+            return matchId && matchId[1] ? matchId[1] : null;
+        }
+
+        function generateLink() {
+            const baseUrl = document.getElementById('baseUrl').value.trim();
+            const clientName = document.getElementById('clientName').value.trim();
+            const clientPhone = document.getElementById('clientPhone').value.trim();
+            const driveLink = document.getElementById('driveLink').value.trim();
+            const kuota = document.getElementById('kuota').value.trim();
+
+            if (!driveLink) return alert('Link Google Drive wajib diisi!');
+
+            const folderId = extractFolderId(driveLink);
+            if (!folderId) return showAlert('Link Google Drive tidak valid!', true);
+
+            let finalUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+            let params = [];
+            
+            if (clientName !== "") {
+                const cleanName = clientName.replace(/\s+/g, '-');
+                params.push(`n=${encodeURIComponent(cleanName)}`);
+            }
+
+            if (kuota && parseInt(kuota) > 0) {
+                const hashedKuota = btoa(kuota.toString()).replace(/=/g, '');
+                params.push(`k=${hashedKuota}`);
+            }
+            
+            params.push(`i=${folderId}`);
+            finalUrl += '?' + params.join('&');
+
+            // Tampilkan kotak hasil
+            document.getElementById('resultBox').classList.remove('hidden');
+            document.getElementById('finalUrl').value = finalUrl;
+
+            // LOGIKA TOMBOL WHATSAPP
+            const btnSendWA = document.getElementById('btnSendWA');
+            if (clientPhone !== "") {
+                btnSendWA.innerHTML = '<i class="fa-brands fa-whatsapp text-lg"></i> Kirim ke Klien';
+            } else {
+                btnSendWA.innerHTML = '<i class="fa-brands fa-whatsapp text-lg"></i> Buka WhatsApp';
+            }
+        }
+
+        // FUNGSI MENYALIN TEKS BIASA
+        function copyToClipboard() {
+            const finalUrl = document.getElementById('finalUrl').value;
+            const clientName = document.getElementById('clientName').value.trim();
+            
+            let greeting = clientName ? `Halo Kak ${clientName}, ` : `Halo Kak, `;
+            let messageToCopy = `${greeting}Berikut adalah galeri foto eksklusif untuk diseleksi:\n\n${finalUrl}\n\nSilakan klik link di atas. Terima kasih!`;
+            
+            navigator.clipboard.writeText(messageToCopy).then(() => {
+                showAlert('Teks pesan berhasil disalin!');
+            }).catch(() => {
+                const textArea = document.createElement("textarea");
+                textArea.value = messageToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showAlert('Teks pesan berhasil disalin!');
+            });
+        }
+
+        // FUNGSI MEMBUKA WHATSAPP OTOMATIS (DENGAN AUTO-CONVERT NOMOR)
+        function sendToClientWA() {
+            const finalUrl = document.getElementById('finalUrl').value;
+            const clientName = document.getElementById('clientName').value.trim();
+            
+            // Ambil nomor WA dan bersihkan dari karakter selain angka
+            let rawPhone = document.getElementById('clientPhone').value.replace(/[^0-9]/g, ''); 
+            
+            // LOGIKA AUTO-CONVERT NOMOR INDONESIA
+            let finalPhone = rawPhone;
+            // Jika nomor dimulai dengan angka '0', ubah menjadi '62'
+            if (finalPhone.startsWith('0')) {
+                finalPhone = '62' + finalPhone.substring(1);
+            }
+
+            let greeting = clientName ? `Halo Kak ${clientName}, ` : `Halo Kak, `;
+            let message = `${greeting}Berikut adalah galeri foto eksklusif untuk diseleksi:\n\n${finalUrl}\n\nSilakan klik link di atas. Terima kasih!`;
+            
+            let waUrl = '';
+            
+            if (finalPhone) {
+                // Jika nomor diisi, kirim langsung ke nomor tersebut menggunakan API yang lebih stabil
+                waUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
+            } else {
+                // Jika kosong, buka WhatsApp biasa (minta pilih kontak)
+                waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+            }
+            
+            window.open(waUrl, '_blank');
+        }
+    </script>
+</body>
+</html>
