@@ -70,7 +70,7 @@
         }
     </style>
     
-    <!-- FILE PENGATURAN -->
+    <!-- PASTIKAN NAMA FILE INI SESUAI DENGAN FILE KONFIGURASI ANDA -->
     <script src="pengaturan.js"></script>
 </head>
 <body class="text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 pb-32 flex flex-col min-h-screen">
@@ -110,7 +110,7 @@
                     <i class="fa-solid fa-camera-retro text-[150px]"></i>
                 </div>
                 <div class="relative z-10">
-                    <h2 class="text-2xl md:text-3xl font-bold mb-1"><span data-i18n="welcomeTitle">Hallo</span>, <span id="displayClientName" class="text-blue-400 capitalize">Kakak</span></h2>
+                    <h2 class="text-2xl md:text-3xl font-bold mb-1"><span data-i18n="welcomeTitle">Hallo</span>, <span id="displayClientName" class="text-blue-400 capitalize">Kakak</span> 窓</h2>
                     <p class="text-slate-300 text-sm md:text-base leading-relaxed" data-i18n="welcomeDesc">Selamat datang di portal seleksi foto dari {vendor}.</p>
                 </div>
                 <div id="greetingQuotaInfo" class="hidden relative z-10 bg-slate-800/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-700 px-5 py-3 rounded-2xl items-center gap-4 shadow-inner">
@@ -442,7 +442,7 @@
         }
 
         // ==========================================
-        // SUPABASE: SAVE & LOAD
+        // SUPABASE: SAVE & LOAD DENGAN REALTIME FIX
         // ==========================================
         async function saveProgress() {
             if (!appState.rootFolderId) return;
@@ -474,15 +474,34 @@
                 if (appState.photos.length > 0) { updateGalleryVisuals(); updateActionBar(); }
             }
 
-            // Realtime
-            supabaseClient.channel('custom-channel')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'portal_sessions', filter: `folder_id=eq.${rootFolderId}` }, (payload) => {
-                    const newData = payload.new.client_data;
+            // PENTING: Bersihkan channel lama agar tidak terjadi memory leak/bentrok
+            supabaseClient.removeAllChannels();
+
+            console.log("-> Memulai koneksi Websocket Realtime...");
+            supabaseClient.channel('koneksi-portal')
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'portal_sessions', 
+                    filter: `folder_id=eq.${rootFolderId}` 
+                }, (payload) => {
+                    console.log("-> Sinyal Realtime diterima:", payload);
+                    
+                    const newData = payload.new?.client_data;
                     if (newData) {
-                        appState.selectedMap = new Map(newData.selected || []); appState.notes = newData.notes || {};
-                        if (appState.photos.length > 0) { updateGalleryVisuals(); updateActionBar(); if (currentZoomPhoto) updateLightboxSelectBtn(); }
+                        appState.selectedMap = new Map(newData.selected || []); 
+                        appState.notes = newData.notes || {};
+                        if (appState.photos.length > 0) { 
+                            updateGalleryVisuals(); 
+                            updateActionBar(); 
+                            if (currentZoomPhoto) updateLightboxSelectBtn(); 
+                        }
                     }
-                }).subscribe();
+                })
+                .subscribe((status, err) => {
+                    console.log("-> Status Realtime:", status);
+                    if (err) console.error("-> Error Realtime:", err);
+                });
         }
 
         function showAlert(message, type = 'success') {
@@ -532,7 +551,15 @@
                 if (fetchedFiles.length > 0 || appState.folderHistory.length > 0) {
                     appState.folders = fetchedFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
                     let photoFiles = fetchedFiles.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
-                    appState.photos = photoFiles.map(f => ({ id: f.id, name: f.name, folderName: displayTitle, url: f.thumbnailLink?.replace('=s220', '=s500'), fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') }));
+                    
+                    // Simpan folderName saat mapping foto
+                    appState.photos = photoFiles.map(f => ({ 
+                        id: f.id, 
+                        name: f.name, 
+                        folderName: displayTitle, 
+                        url: f.thumbnailLink?.replace('=s220', '=s500'), 
+                        fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
+                    }));
                     appState.originalPhotos = [...appState.photos];
                     
                     renderFolders(); document.getElementById('sortDropdown').value = 'random'; applySort('random');
@@ -716,20 +743,39 @@
             document.getElementById('actionBar').classList[count > 0 ? 'remove' : 'add']('translate-y-full');
         }
 
+        // FUNGSI DOWNLOAD LIST DENGAN FOLDER
         function downloadList() {
             if (appState.selectedMap.size === 0) return;
-            const selected = Array.from(appState.selectedMap.values()); const vendor = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) ? CONFIG_APP.namaVendor : 'Studio';
+            const selected = Array.from(appState.selectedMap.values()); 
+            const vendor = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) ? CONFIG_APP.namaVendor : 'Studio';
+            
             let txt = `LIST FOTO PILIHAN KLIEN\n=======================\nLayanan : ${vendor}\nKlien   : ${appState.clientName || 'Klien'}\nTotal   : ${selected.length} Foto\n=======================\n\n`;
-            selected.forEach((p, i) => { txt += `${i + 1}. ${p.name}\n`; if (appState.notes[p.id]) txt += `   Catatan: ${appState.notes[p.id]}\n`; });
-            const blob = new Blob([txt], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-            a.download = `List_Pilihan_${(appState.clientName || 'klien').replace(/\s+/g, '_')}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            
+            selected.forEach((p, i) => { 
+                txt += `${i + 1}. ${p.name} (Folder: ${p.folderName || 'Utama'})\n`; 
+                if (appState.notes[p.id]) txt += `   Catatan: ${appState.notes[p.id]}\n`; 
+            });
+            
+            const blob = new Blob([txt], { type: 'text/plain' }); 
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob);
+            a.download = `List_Pilihan_${(appState.clientName || 'klien').replace(/\s+/g, '_')}.txt`; 
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
 
+        // FUNGSI COPY / KIRIM WA DENGAN FOLDER
         function copyToClipboard() {
             if (appState.selectedMap.size === 0) return;
-            const selected = Array.from(appState.selectedMap.values()); const vendor = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) ? CONFIG_APP.namaVendor : 'Studio';
+            const selected = Array.from(appState.selectedMap.values()); 
+            const vendor = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) ? CONFIG_APP.namaVendor : 'Studio';
+            
             let txt = `*List Foto Pilihan Client*\nLayanan: ${vendor}\nKlien: *${appState.clientName}*\nTotal: ${selected.length} Foto\n\n`;
-            selected.forEach((p, i) => { txt += `${i + 1}. ${p.name}\n`; if (appState.notes[p.id]) txt += `   _Catatan: ${appState.notes[p.id]}_\n`; });
+            
+            selected.forEach((p, i) => { 
+                txt += `${i + 1}. ${p.name} _[Folder: ${p.folderName || 'Utama'}]_\n`; 
+                if (appState.notes[p.id]) txt += `   _Catatan: ${appState.notes[p.id]}_\n`; 
+            });
+            
             if (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.whatsappAdmin) {
                 window.open(`https://wa.me/${CONFIG_APP.whatsappAdmin}?text=${encodeURIComponent(txt)}`, '_blank');
             } else {
@@ -779,6 +825,9 @@
             if (!currentZoomPhoto) return; const val = document.getElementById('lightboxNote').value.trim();
             if (val) appState.notes[currentZoomPhoto.id] = val; else delete appState.notes[currentZoomPhoto.id]; saveProgress();
         }
+
+        // PENDAFTARAN FUNGSI KE WINDOW 
+        window.toggleDarkMode = toggleDarkMode; window.toggleLanguage = toggleLanguage; window.showTutorial = showTutorial; window.closeTutorial = closeTutorial; window.loadFromDrive = loadFromDrive; window.applySort = applySort; window.toggleViewMode = toggleViewMode; window.toggleSelect = toggleSelect; window.downloadList = downloadList; window.copyToClipboard = copyToClipboard; window.openLightbox = openLightbox; window.closeLightbox = closeLightbox; window.nextPhoto = nextPhoto; window.prevPhoto = prevPhoto; window.toggleLightboxSelect = toggleLightboxSelect; window.updateLightboxSelectBtn = updateLightboxSelectBtn; window.saveNote = saveNote; window.changePage = changePage; window.hideTooltip = hideTooltip; window.toggleGridSize = toggleGridSize; window.navigateBackFolder = navigateBackFolder;
 
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPortal); else initPortal();
     </script>
