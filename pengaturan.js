@@ -1,8 +1,8 @@
 // PENGATURAN APLIKASI CLIENT PORTAL[cite: 1]
 const CONFIG_APP = {
-    namaVendor: "Portal Client",[cite: 1]
-    googleApiKey: "AIzaSyAZczbLeVTXl-QKqLDJFWQLCd-lW9jqqxo",[cite: 1]
-    whatsappAdmin: "6282117102831",[cite: 1]
+    namaVendor: "Memory Kita Photo",
+    googleApiKey: "AIzaSyAZczbLeVTXl-QKqLDJFWQLCd-lW9jqqxo",
+    whatsappAdmin: "6282117102831",
 
     // Konfigurasi Supabase
     supabaseUrl: "https://ihqafpnqmlhewwyatiau.supabase.co",
