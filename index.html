@@ -110,7 +110,7 @@
                     <i class="fa-solid fa-camera-retro text-[150px]"></i>
                 </div>
                 <div class="relative z-10">
-                    <h2 class="text-2xl md:text-3xl font-bold mb-1"><span data-i18n="welcomeTitle">Hallo</span>, <span id="displayClientName" class="text-blue-400 capitalize">Kakak</span></h2>
+                    <h2 class="text-2xl md:text-3xl font-bold mb-1"><span data-i18n="welcomeTitle">Hallo</span>, <span id="displayClientName" class="text-blue-400 capitalize">Kakak</span> 窓</h2>
                     <p class="text-slate-300 text-sm md:text-base leading-relaxed" data-i18n="welcomeDesc">Selamat datang di portal seleksi foto dari {vendor}.</p>
                 </div>
                 <div id="greetingQuotaInfo" class="hidden relative z-10 bg-slate-800/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-700 px-5 py-3 rounded-2xl items-center gap-4 shadow-inner">
@@ -442,7 +442,7 @@
         }
 
         // ==========================================
-        // SUPABASE: SAVE & LOAD DENGAN REALTIME FIX
+        // SUPABASE: SAVE & LOAD DENGAN ANTI-EXPIRED URL
         // ==========================================
         async function saveProgress() {
             if (!appState.rootFolderId) return;
@@ -469,31 +469,43 @@
                 appState.selectedMap = new Map(); appState.notes = {};
             } else if (data && data.client_data) {
                 console.log("-> Riwayat ditemukan.");
-                appState.selectedMap = new Map(data.client_data.selected || []);
+                
+                // FIX URL EXPIRED UNTUK DATA LAMA
+                const fixedSelected = (data.client_data.selected || []).map(([id, photoObj]) => {
+                    photoObj.url = `https://drive.google.com/thumbnail?id=${id}&sz=w500`;
+                    photoObj.fullUrl = `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
+                    return [id, photoObj];
+                });
+
+                appState.selectedMap = new Map(fixedSelected);
                 appState.notes = data.client_data.notes || {};
                 if (appState.photos.length > 0) { updateGalleryVisuals(); updateActionBar(); }
             }
 
-            // PENTING: Bersihkan channel lama agar tidak terjadi memory leak/bentrok
+            // Bersihkan channel lama
             supabaseClient.removeAllChannels();
 
             console.log("-> Memulai koneksi Websocket Realtime...");
             supabaseClient.channel('koneksi-portal')
                 .on('postgres_changes', { 
-                    event: '*', 
-                    schema: 'public', 
-                    table: 'portal_sessions', 
-                    filter: `folder_id=eq.${rootFolderId}` 
+                    event: '*', schema: 'public', table: 'portal_sessions', filter: `folder_id=eq.${rootFolderId}` 
                 }, (payload) => {
                     console.log("-> Sinyal Realtime diterima:", payload);
-                    
                     const newData = payload.new?.client_data;
+                    
                     if (newData) {
-                        appState.selectedMap = new Map(newData.selected || []); 
+                        // FIX URL EXPIRED UNTUK DATA REALTIME
+                        const fixedNewSelected = (newData.selected || []).map(([id, photoObj]) => {
+                            photoObj.url = `https://drive.google.com/thumbnail?id=${id}&sz=w500`;
+                            photoObj.fullUrl = `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
+                            return [id, photoObj];
+                        });
+
+                        appState.selectedMap = new Map(fixedNewSelected); 
                         appState.notes = newData.notes || {};
+                        
                         if (appState.photos.length > 0) { 
-                            updateGalleryVisuals(); 
-                            updateActionBar(); 
+                            updateGalleryVisuals(); updateActionBar(); 
                             if (currentZoomPhoto) updateLightboxSelectBtn(); 
                         }
                     }
@@ -550,15 +562,15 @@
 
                 if (fetchedFiles.length > 0 || appState.folderHistory.length > 0) {
                     appState.folders = fetchedFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
-                    let photoFiles = fetchedFiles.filter(f => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink);
+                    let photoFiles = fetchedFiles.filter(f => f.mimeType !== 'application/vnd.google-apps.folder');
                     
-                    // Simpan folderName saat mapping foto
+                    // FIX: Gunakan format URL permanen Google Drive berdasarkan ID
                     appState.photos = photoFiles.map(f => ({ 
                         id: f.id, 
                         name: f.name, 
                         folderName: displayTitle, 
-                        url: f.thumbnailLink?.replace('=s220', '=s500'), 
-                        fullUrl: f.thumbnailLink?.replace('=s220', '=s1600') 
+                        url: `https://drive.google.com/thumbnail?id=${f.id}&sz=w500`, 
+                        fullUrl: `https://drive.google.com/thumbnail?id=${f.id}&sz=w1600` 
                     }));
                     appState.originalPhotos = [...appState.photos];
                     
