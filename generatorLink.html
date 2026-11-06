@@ -31,9 +31,9 @@
                 </div>
             </div>
             <div class="shrink-0 flex gap-2">
-                <a id="lnkStudio" href="pengaturanStudio.html" class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition rounded-lg px-3 py-2 shadow-md border border-white/30"><i class="fa-solid fa-sliders mr-1"></i> Pengaturan</a>
-                <button id="btnTour" onclick="startTour(true)" class="text-xs font-bold text-white bg-amber-500 hover:bg-amber-400 transition rounded-lg px-3 py-2 shadow-md border border-white/30" title="Ulangi tur panduan"><i class="fa-solid fa-circle-question mr-1"></i> Tur</button>
-                <button id="btnLogout" onclick="Admin.logout()" class="text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition rounded-lg px-3 py-2 shadow-md border border-white/30"><i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar</button>
+                <a id="lnkStudio" href="pengaturanStudio.html" class="text-xs font-bold text-slate-900 bg-white hover:bg-slate-200 transition rounded-lg px-3 py-2 shadow-md border border-white"><i class="fa-solid fa-sliders mr-1"></i> Pengaturan</a>
+                <button id="btnTour" onclick="startTour(true)" class="text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition rounded-lg px-3 py-2 border border-white/50" title="Ulangi tur panduan"><i class="fa-solid fa-circle-question mr-1"></i> Tur</button>
+                <button id="btnLogout" onclick="Admin.logout()" class="text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition rounded-lg px-3 py-2 border border-white/50"><i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar</button>
             </div>
         </div>
 
@@ -411,10 +411,10 @@
                         <p class="col-span-2"><i class="fa-regular fa-clock mr-1 text-slate-400"></i>Terakhir memilih: ${fmtDate(l.updatedAt)}</p>
                     </div>
                     <div class="flex flex-wrap gap-2 pt-1">
-                        <button onclick="copyClientLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm transition"><i class="fa-solid fa-copy mr-1"></i>Salin Link</button>
-                        <button onclick="sendToSorter('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm transition ${l.selectedCount ? '' : 'opacity-50'}" title="Kirim daftar foto pilihan klien langsung ke Auto RAW Sorter"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Pakai di RAW Sorter</button>
-                        <button onclick="extendLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600 shadow-sm transition"><i class="fa-solid fa-calendar-plus mr-1"></i>Perpanjang</button>
-                        <button onclick="toggleLinkClosed('${l.code}', ${l.closed ? 'false' : 'true'})" class="px-3 py-1.5 text-[11px] font-bold ${l.closed ? 'bg-teal-600 hover:bg-teal-700' : 'bg-rose-600 hover:bg-rose-700'} text-white rounded-lg shadow-sm transition"><i class="fa-solid ${l.closed ? 'fa-lock-open' : 'fa-lock'} mr-1"></i>${l.closed ? 'Buka Lagi' : 'Tutup Sekarang'}</button>
+                        <button onclick="copyClientLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-slate-900 text-white rounded-lg hover:bg-black shadow-sm transition"><i class="fa-solid fa-copy mr-1"></i>Salin Link</button>
+                        <button onclick="sendToSorter('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition ${l.selectedCount ? '' : 'opacity-50'}" title="Kirim daftar foto pilihan klien langsung ke Auto RAW Sorter"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Pakai di RAW Sorter</button>
+                        <button onclick="extendLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-200 transition"><i class="fa-solid fa-calendar-plus mr-1"></i>Perpanjang</button>
+                        <button onclick="toggleLinkClosed('${l.code}', ${l.closed ? 'false' : 'true'})" class="px-3 py-1.5 text-[11px] font-bold bg-white border ${l.closed ? 'border-blue-300 text-blue-700 hover:bg-blue-50' : 'border-rose-300 text-rose-700 hover:bg-rose-50'} rounded-lg transition"><i class="fa-solid ${l.closed ? 'fa-lock-open' : 'fa-lock'} mr-1"></i>${l.closed ? 'Buka Lagi' : 'Tutup Sekarang'}</button>
                     </div>
                 </div>`;
             }).join('');
