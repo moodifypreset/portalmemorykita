@@ -897,6 +897,7 @@
             if (!st || typeof CONFIG_APP === 'undefined') return;
             if (st.namaVendor) CONFIG_APP.namaVendor = st.namaVendor;
             if (st.whatsappAdmin) CONFIG_APP.whatsappAdmin = st.whatsappAdmin;
+            if (st.googleApiKey) CONFIG_APP.googleApiKey = st.googleApiKey;
             watermarkDataUri = null;   // watermark memakai nama studio
 
             const name = CONFIG_APP.namaVendor || 'Studio Foto';
@@ -913,7 +914,7 @@
             }
 
             if (persist) {
-                try { localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({ namaVendor: st.namaVendor || '', whatsappAdmin: st.whatsappAdmin || '' })); } catch (e) {}
+                try { localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({ namaVendor: st.namaVendor || '', whatsappAdmin: st.whatsappAdmin || '', googleApiKey: st.googleApiKey || '' })); } catch (e) {}
             }
             if (refresh) applyTranslations();   // teks sambutan memuat nama studio
         }
@@ -1502,7 +1503,7 @@
 
             if (typeof CONFIG_APP !== 'undefined') {
                 document.getElementById('footerVendorName').textContent = CONFIG_APP.namaVendor || 'Studio Foto';
-                document.getElementById('pageTitle').textContent = `Client Portal - ${CONFIG_APP.namaVendor}`;
+                document.getElementById('pageTitle').textContent = `Client Portal - ${CONFIG_APP.namaVendor || 'Studio Foto'}`;
                 document.getElementById('headerVendorName').textContent = CONFIG_APP.namaVendor || 'Studio Foto';
                 document.getElementById('heroVendor').textContent = CONFIG_APP.namaVendor || 'Studio Foto';
             }
@@ -1565,7 +1566,7 @@
                 document.getElementById('inputSection').classList.add('hidden');
                 document.getElementById('heroSection').classList.remove('hidden');
                 startDeadlineTimer();
-                setTimeout(() => { loadFromDrive(); }, 100);
+                setTimeout(async () => { if (!CONFIG_APP.googleApiKey && serverUrl()) await loadSettingsOnly(); loadFromDrive(); }, 100);
             } else {
                 // Tanpa link hasil generate: tampilkan halaman welcome, akses manual dinonaktifkan
                 document.getElementById('welcomeSection').classList.remove('hidden');
