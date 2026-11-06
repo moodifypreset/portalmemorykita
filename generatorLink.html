@@ -16,6 +16,15 @@
     <script src="pengaturan.js"></script>
     <script src="adminAuth.js"></script>
     <script src="tour.js"></script>
+<style>
+        .live-toast { animation: liveIn .25s ease-out; transition: opacity .25s, transform .25s; }
+        .live-toast-out { opacity: 0; transform: translateX(12px); }
+        @keyframes liveIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+        .live-flash { animation: liveFlash 1.6s ease-out; }
+        @keyframes liveFlash { 0% { box-shadow: inset 0 0 0 2px rgba(37,99,235,.55), 0 0 0 0 rgba(37,99,235,.25); } 100% { box-shadow: inset 0 0 0 2px rgba(37,99,235,0), 0 0 0 0 rgba(37,99,235,0); } }
+        .live-dot { animation: livePulse 1.4s infinite; }
+        @keyframes livePulse { 50% { opacity: .35; } }
+    </style>
 </head>
 <body class="text-slate-800 flex flex-col items-center justify-center min-h-screen p-4 py-10 gap-6">
 
@@ -152,7 +161,7 @@
 
     <!-- DAFTAR LINK KLIEN (mode server) -->
     <div id="listBox" class="hidden bg-white w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden lg:sticky lg:top-6">
-        <div class="px-6 py-4 flex items-center justify-between border-b border-slate-200">
+        <div class="sec-head px-6 py-4 flex items-center justify-between border-b border-slate-200">
             <div>
                 <h2 class="font-bold text-slate-800">Link Klien & Pilihan</h2>
                 <p class="text-[11px] text-slate-500">Lihat siapa yang sudah memilih, perpanjang atau tutup link.</p>
@@ -225,10 +234,6 @@
             });
         }
 
-        // Dipanggil setiap kali admin berhasil masuk
-        Admin.onReady(() => {
-            Promise.all([Promise.resolve(loadServerSettings(true)), Promise.resolve(loadLinkList(true))]).then(() => setTimeout(() => startTour(false), 500));
-        });
 
         function saveTemplate() {
             const currentText = document.getElementById('waTemplate').value;
@@ -376,6 +381,7 @@
         }
 
         let currentLinks = [];
+        const LIST_CACHE = 'cp_list_cache';
         async function loadLinkList(silent) {
             const box = document.getElementById('linkList');
             const icon = document.querySelector('#btnLoadList i');
@@ -386,9 +392,131 @@
                 currentLinks = res.links;
                 box.dataset.loaded = '1';
                 renderLinkList(res.now);
+                try { localStorage.setItem(LIST_CACHE, JSON.stringify({ links: res.links })); } catch (e) {}
+                liveBaseline();
             } catch (e) {
                 showAlert('Server tidak dapat dihubungi.', true);
             } finally { icon.classList.remove('fa-spin'); }
+        }
+
+
+        // ===== PEMANTAUAN REALTIME =====
+        // Server tidak bisa "mendorong" data (Apps Script), jadi halaman ini bertanya ke endpoint 'activity'
+        // yang sangat ringan: tiap 4 detik saat ada klien aktif, 8 detik saat sepi, berhenti saat tab disembunyikan.
+        const live = { prev: {}, sig: null, busy: false, timer: null, fails: 0, useList: false, started: false, lastChange: 0 };
+
+        function liveBaseline() {
+            live.prev = {};
+            currentLinks.forEach(l => { live.prev[l.code] = { count: l.selectedCount || 0, updatedAt: l.updatedAt || 0, online: undefined }; });
+            live.sig = null;   // diisi oleh polling pertama
+        }
+
+        function ensureToastBox() {
+            let b = document.getElementById('liveToasts');
+            if (!b) {
+                b = document.createElement('div');
+                b.id = 'liveToasts';
+                b.className = 'fixed top-4 right-4 z-[60] flex flex-col gap-2 w-72 max-w-[calc(100vw-2rem)] pointer-events-none';
+                document.body.appendChild(b);
+            }
+            return b;
+        }
+
+        function liveToast(code, title, detail, icon) {
+            const box = ensureToastBox();
+            const old = box.querySelector('[data-toast="' + code + '"]');
+            if (old) old.remove();
+            const el = document.createElement('div');
+            el.dataset.toast = code;
+            el.className = 'live-toast pointer-events-auto cursor-pointer bg-white border border-slate-200 border-l-4 border-l-blue-500 rounded-xl shadow-lg p-3 text-xs';
+            el.innerHTML = '<p class="font-bold text-slate-800"><i class="fa-solid ' + icon + ' text-blue-600 mr-1.5"></i>' + escapeHtml(title) + '</p><p class="text-slate-500 mt-0.5">' + escapeHtml(detail) + '</p>';
+            el.onclick = () => { flashCard(code, true); el.remove(); };
+            box.appendChild(el);
+            while (box.children.length > 4) box.firstChild.remove();
+            setTimeout(() => { if (el.parentNode) { el.classList.add('live-toast-out'); setTimeout(() => el.remove(), 250); } }, 6000);
+        }
+
+        function cardOf(code) { return document.querySelector('#linkList [data-code="' + code + '"]'); }
+        function flashCard(code, scroll) {
+            const c = cardOf(code);
+            if (!c) return;
+            if (scroll) c.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            c.classList.remove('live-flash'); void c.offsetWidth; c.classList.add('live-flash');
+        }
+
+        function liveApply(items, sig) {
+            // link baru / status / batas waktu berubah -> muat ulang daftar penuh
+            if (live.sig !== null && sig !== live.sig) { live.sig = sig; loadLinkList(true); return; }
+            live.sig = sig;
+            const now = Date.now();
+            Object.keys(items).forEach(code => {
+                const it = items[code], p = live.prev[code];
+                const l = currentLinks.find(x => x.code === code);
+                if (!l) return;
+                const name = l.name || 'Klien';
+                const changed = p && (it.count !== p.count || (it.updatedAt || 0) > (p.updatedAt || 0));
+                if (changed) {
+                    live.lastChange = now;
+                    if (it.count !== p.count) {
+                        const more = it.count > p.count;
+                        liveToast(code, name + (more ? ' sedang memilih foto' : ' mengubah pilihan'), p.count + ' → ' + it.count + ' foto' + (l.kuota ? ' (kuota ' + l.kuota + ')' : ''), 'fa-hand-pointer');
+                    }
+                    flashCard(code);
+                } else if (p && p.online === 0 && it.online > 0) {
+                    liveToast(code, name + ' membuka link', 'Klien sedang online sekarang', 'fa-eye');
+                }
+                l.selectedCount = it.count; l.updatedAt = it.updatedAt; l.online = it.online;
+                const c = cardOf(code);
+                if (c) {
+                    const pr = c.querySelector('.js-prog'); if (pr) pr.textContent = l.kuota ? it.count + ' / ' + l.kuota + ' foto' : it.count + ' foto';
+                    const up = c.querySelector('.js-upd'); if (up) up.textContent = fmtDate(it.updatedAt);
+                    const on = c.querySelector('.js-online'); if (on) on.classList.toggle('hidden', !(it.online > 0));
+                    const sb = c.querySelector('.fa-wand-magic-sparkles'); if (sb && sb.parentNode) sb.parentNode.classList.toggle('opacity-50', !it.count);
+                }
+                live.prev[code] = { count: it.count, updatedAt: it.updatedAt || 0, online: it.online === undefined ? (p ? p.online : undefined) : it.online };
+            });
+        }
+
+        async function livePoll() {
+            if (live.busy) return;
+            live.busy = true;
+            try {
+                if (document.hidden || document.getElementById('linkList').dataset.loaded !== '1') return;
+                let res = null;
+                if (!live.useList) {
+                    res = await Admin.call({ action: 'activity' });
+                    if (res && !res.ok && res.error === 'unknown_action') live.useList = true;   // Code.gs lama: pakai 'list' (lebih berat)
+                }
+                if (live.useList) {
+                    const r = await Admin.call({ action: 'list' });
+                    if (r && r.ok) {
+                        const items = {}; const parts = [];
+                        r.links.forEach(l => { items[l.code] = { count: l.selectedCount || 0, updatedAt: l.updatedAt || 0, online: undefined }; parts.push([l.code, l.name, l.kuota, l.deadline, l.closed].join('~')); });
+                        liveApply(items, parts.join('|'));
+                    }
+                } else if (res && res.ok) {
+                    liveApply(res.items || {}, res.sig);
+                }
+                live.fails = 0;
+            } catch (e) { live.fails++; }
+            finally { live.busy = false; }
+        }
+
+        function liveSchedule() {
+            clearTimeout(live.timer);
+            const anyOnline = Object.keys(live.prev).some(c => live.prev[c].online > 0);
+            const recent = Date.now() - live.lastChange < 120000;
+            let delay = (anyOnline || recent) ? 4000 : 8000;
+            if (live.useList) delay = Math.max(delay, 12000);
+            if (live.fails) delay = Math.min(30000, delay * Math.pow(2, live.fails));
+            live.timer = setTimeout(async () => { await livePoll(); liveSchedule(); }, delay);
+        }
+
+        function startLive() {
+            if (live.started) return;
+            live.started = true;
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) { livePoll(); liveSchedule(); } });
+            liveSchedule();
         }
 
         function renderLinkList(now) {
@@ -401,18 +529,21 @@
                 else if (expired) { state = 'Waktu habis'; tone = 'bg-red-100 text-red-700'; }
                 else { state = 'Aktif'; tone = 'bg-green-100 text-green-700'; }
                 const progress = l.kuota ? `${l.selectedCount} / ${l.kuota} foto` : `${l.selectedCount} foto`;
-                return `<div class="p-4 space-y-2">
+                return `<div class="p-4 space-y-2" data-code="${l.code}">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <p class="font-bold text-sm text-slate-800 truncate">${escapeHtml(l.name || '(tanpa nama)')}</p>
                             <p class="text-[11px] text-slate-500 font-mono">${escapeHtml(l.code)}</p>
                         </div>
-                        <span class="shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${tone}">${state}</span>
+                        <div class="shrink-0 flex flex-col items-end gap-1">
+                            <span class="text-[10px] font-bold px-2 py-1 rounded-full ${tone}">${state}</span>
+                            <span class="js-online text-[10px] font-bold text-green-700 ${l.online > 0 ? '' : 'hidden'}"><span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mr-1 live-dot"></span>Klien online</span>
+                        </div>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
-                        <p><i class="fa-solid fa-images mr-1 text-slate-400"></i>${progress}</p>
+                        <p><i class="fa-solid fa-images mr-1 text-slate-400"></i><span class="js-prog">${progress}</span></p>
                         <p><i class="fa-solid fa-hourglass-half mr-1 text-slate-400"></i>${l.deadline ? fmtDate(l.deadline) : 'Tanpa batas'}</p>
-                        <p class="col-span-2"><i class="fa-regular fa-clock mr-1 text-slate-400"></i>Terakhir memilih: ${fmtDate(l.updatedAt)}</p>
+                        <p class="col-span-2"><i class="fa-regular fa-clock mr-1 text-slate-400"></i>Terakhir memilih: <span class="js-upd">${fmtDate(l.updatedAt)}</span></p>
                     </div>
                     <div class="flex flex-wrap gap-2 pt-1">
                         <button onclick="copyClientLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-slate-900 text-white rounded-lg hover:bg-black shadow-sm transition"><i class="fa-solid fa-copy mr-1"></i>Salin Link</button>
@@ -538,6 +669,16 @@
             
             window.open(waUrl, '_blank');
         }
+
+        // Dipanggil setiap kali admin berhasil masuk
+        Admin.onReady(() => {
+            // tampilkan daftar tersimpan dulu agar langsung terlihat, lalu segarkan dari server
+            try {
+                const c = JSON.parse(localStorage.getItem(LIST_CACHE) || 'null');
+                if (c && Array.isArray(c.links) && c.links.length && !document.getElementById('linkList').dataset.loaded) { currentLinks = c.links; renderLinkList(Date.now()); }
+            } catch (e) {}
+            Promise.all([Promise.resolve(loadServerSettings(true)), Promise.resolve(loadLinkList(true))]).then(() => { startLive(); setTimeout(() => startTour(false), 500); });
+        });
     </script>
 </body>
 </html>

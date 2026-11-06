@@ -29,7 +29,7 @@ const DEFAULT_ADMIN_KEY = 'GANTI-DENGAN-KUNCI-RAHASIA';   // jangan diubah (pena
 // ====== VERSI SERVER ======
 // Naik hanya jika rilis baru membutuhkan perubahan di Code.gs. Website (adminAuth.js,
 // REQUIRED_SERVER_VERSION) membandingkan angka ini dan menampilkan peringatan update.
-const SERVER_VERSION = 1;
+const SERVER_VERSION = 2;
 
 // ====== PENGATURAN ======
 const SHEET_LINKS = 'Links';
@@ -82,6 +82,7 @@ function handle_(params, body) {
       case 'createLink': return json_(actionCreateLink_(src));
       case 'updateLink': return json_(actionUpdateLink_(src));
       case 'list':       return json_(actionList_(src));
+      case 'activity':   return json_(actionActivity_(src));
       case 'settings':     return json_(actionSettings_(src));
       case 'logo':         return json_(actionLogo_(src));
       case 'getSettings':  return json_(actionGetSettings_(src));
@@ -271,14 +272,30 @@ function resetPassword() {
   p.setProperty('TOKEN_SECRET', Utilities.getUuid() + Utilities.getUuid());
 }
 
+// Daftar link dipakai di setiap permintaan klien. Disimpan sementara di cache (20 detik) agar
+// tidak membaca Sheet berulang kali; dihapus otomatis saat link dibuat/diubah lewat admin.
+const LINKS_CACHE_KEY = 'lk_all';
+const LINKS_CACHE_SEC = 20;
+function clearLinksCache_() { try { CacheService.getScriptCache().remove(LINKS_CACHE_KEY); } catch (e) {} }
 function readLinks_() {
   const sh = ensureSheets_().links;
+  const cache = CacheService.getScriptCache();
+  try {
+    const hit = cache.get(LINKS_CACHE_KEY);
+    if (hit) {
+      const vals = JSON.parse(hit);
+      return { sheet: sh, rows: vals.map(function (v, i) { return { row: i + 2, v: v }; }) };
+    }
+  } catch (e) {}
   const last = sh.getLastRow();
   if (last < 2) return { sheet: sh, rows: [] };
   const values = sh.getRange(2, 1, last - 1, LINK_HEADERS.length).getValues();
+  try {
+    const txt = JSON.stringify(values);
+    if (txt.length < 90000) cache.put(LINKS_CACHE_KEY, txt, LINKS_CACHE_SEC);
+  } catch (e) {}
   return { sheet: sh, rows: values.map((v, i) => ({ row: i + 2, v: v })) };
 }
-
 function findLink_(code) {
   if (!code) return null;
   const all = readLinks_();
@@ -511,6 +528,7 @@ function actionCreateLink_(src) {
     ]]);
     sh.getRange(row, L.DEADLINE).setNumberFormat('dd/MM/yyyy HH:mm');
     sh.getRange(row, L.CREATED).setNumberFormat('dd/MM/yyyy HH:mm');
+    clearLinksCache_();
     return { ok: true, code: code };
   } finally {
     lock.releaseLock();
@@ -536,6 +554,7 @@ function actionUpdateLink_(src) {
     const k = Number(src.kuota);
     sh.getRange(found.row, L.KUOTA).setValue(k > 0 ? Math.floor(k) : '');
   }
+  clearLinksCache_();
   return { ok: true };
 }
 
@@ -558,6 +577,40 @@ function actionList_(src) {
     return o;
   }).reverse();
   return { ok: true, now: Date.now(), links: links.slice(0, 200) };
+}
+
+// Ringan untuk pemantauan realtime di generatorLink: hanya jumlah pilihan, waktu terakhir, dan
+// jumlah perangkat klien yang sedang online. 'sig' berubah jika ada link baru / status / batas waktu berubah.
+function actionActivity_(src) {
+  if (!isAdmin_(src)) return adminError_(src);
+  const now = Date.now();
+  const all = readLinks_();
+  const sh = ensureSheets_().sel;
+  const last = sh.getLastRow();
+  const counts = {};
+  if (last >= 2) {
+    const n = last - 1;
+    const codes = sh.getRange(2, 1, n, 1).getValues();
+    const cnt = sh.getRange(2, 3, n, 1).getValues();
+    const upd = sh.getRange(2, 6, n, 1).getValues();
+    for (let i = 0; i < n; i++) counts[clean_(codes[i][0])] = { count: Number(cnt[i][0]) || 0, updatedAt: toMs_(upd[i][0]) };
+  }
+  const objs = all.rows.map(function (r) { return linkToObj_(r.v); }).slice(-200);
+  let pres = {};
+  try { pres = CacheService.getScriptCache().getAll(objs.map(function (o) { return 'pres_' + o.code; })) || {}; } catch (e) { pres = {}; }
+  const items = {};
+  const sigParts = [];
+  objs.forEach(function (o) {
+    const c = counts[o.code] || { count: 0, updatedAt: null };
+    let online = 0;
+    try {
+      const map = JSON.parse(pres['pres_' + o.code] || '{}');
+      Object.keys(map).forEach(function (k) { if (now - map[k] <= PRESENCE_ACTIVE_MS) online++; });
+    } catch (e) {}
+    items[o.code] = { count: c.count, updatedAt: c.updatedAt, online: online };
+    sigParts.push([o.code, o.name, o.kuota, o.deadline, o.closed ? 1 : 0].join('~'));
+  });
+  return { ok: true, now: now, sig: sha_(sigParts.join('|')).slice(0, 12), items: items };
 }
 
 // ---------------------------------------------------------------------
@@ -630,7 +683,7 @@ function actionSaveSettings_(src) {
 
   if (Object.prototype.hasOwnProperty.call(incoming, 'tema')) {
     const tema = String(incoming.tema || '').trim();
-    if (tema && ['bersih', 'gelap', 'elegan'].indexOf(tema) === -1) return { ok: false, error: 'bad_theme' };
+    if (tema && ['bersih', 'gelap', 'elegan', 'mono'].indexOf(tema) === -1) return { ok: false, error: 'bad_theme' };
     clean.tema = tema;
   }
   if (Object.prototype.hasOwnProperty.call(incoming, 'logoWmWhite')) clean.logoWmWhite = truthy_(incoming.logoWmWhite) ? '1' : '';

@@ -52,6 +52,8 @@
     </div>
 
     <script>
+        // Tema studio diambil dari server (info publik) agar halaman login tampil sesuai tema di perangkat baru juga
+        (async () => { try { if (!Admin.serverUrl()) return; const r = await Admin.post({ action: 'settings' }); if (r && r.ok && r.settings && window.Theme) Theme.apply(r.settings.tema || '', true); } catch (e) {} })();
         const $ = (id) => document.getElementById(id);
         const say = (t, tone) => {
             const el = $('gateMsg'); el.textContent = t;

@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="pageTitle">Client Portal</title>
+    <link rel="preconnect" href="https://script.google.com">
+    <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.googleapis.com">
     
     <script>
         tailwind = {
@@ -1192,9 +1195,12 @@
             if (!serverUrl()) return showInvalidLink(t('errServerNotSet'));
             if (!code) return showInvalidLink(t('errLinkInvalid'));
 
-            let data, offline = false;
+            // Tampil cepat: jika ada salinan terakhir di browser, langsung dipakai lalu disegarkan di latar belakang
+            let data, offline = false, fromCache = false;
+            const early = readCfgCache(code);
             try {
-                data = await loadRemoteConfig(code);
+                if (early && early.link) { data = early; fromCache = true; }
+                else data = await loadRemoteConfig(code);
             } catch (e) {
                 if (e.serverCode === 'not_found') return showInvalidLink(t('errLinkInvalid'));
                 console.error('Gagal memuat konfigurasi dari server:', e);
@@ -1214,6 +1220,16 @@
             startRemoteWatchers();
             applyTranslations();
             loadFromDrive();
+            if (fromCache) {
+                loadRemoteConfig(code).then(fresh => {
+                    applyRemoteLink(fresh.link);
+                    if (fresh.selection) applyServerSelection(fresh.selection);
+                    updateActionBar();
+                }).catch(e => {
+                    if (e && e.serverCode === 'not_found') return showInvalidLink(t('errLinkInvalid'));
+                    setSyncStatus('offline');
+                });
+            }
         }
 
         // ----- Sinkron pilihan ke server -----
@@ -1241,7 +1257,7 @@
             return Array.from(appState.selectedMap.values()).map(p => ({ id: p.id, name: p.name, note: appState.notes[p.id] || '' }));
         }
 
-        function scheduleRemoteSave(delay = 1500) {
+        function scheduleRemoteSave(delay = 900) {
             const r = appState.remote;
             if (!r || isLocked()) return;
             r.rev++;

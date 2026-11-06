@@ -11,7 +11,7 @@
     const URL_KEY = 'cpServerUrl';
     // Versi Code.gs minimum yang dibutuhkan website ini. Naikkan angka ini (bersama SERVER_VERSION
     // di Code.gs) hanya saat rilis baru membutuhkan perubahan di server.
-    const REQUIRED_SERVER_VERSION = 1;
+    const REQUIRED_SERVER_VERSION = 2;
     const LOGIN_PAGE = 'login.html';
     const ALLOWED_NEXT = ['generatorLink.html', 'pengaturanStudio.html'];
     const cfg = () => (typeof CONFIG_APP !== 'undefined' ? CONFIG_APP : {});
@@ -101,58 +101,18 @@
         }
     }
 
-    // Pemberitahuan (bukan error) jika Code.gs di server pembeli lebih lama dari versi terbaru.
-    // Website tetap berjalan normal dengan server lama; fitur yang butuh server baru otomatis nonaktif.
-    // Pemberitahuan bisa ditutup ("Nanti") dan baru muncul lagi pada versi server berikutnya.
+    // Tidak ada lagi peringatan versi untuk pengguna. Fitur yang butuh server baru mendeteksi
+    // sendiri (mis. presence -> unknown_action) dan otomatis nonaktif tanpa pesan error.
+    // Fungsi ini hanya mengembalikan info versi untuk keperluan debug (Admin.checkServer() di konsol).
     async function checkServer() {
         try {
             const r = await post({ action: 'ping' });
-            const version = Number(r && r.version) || 0;   // server lama (sebelum penanda versi) = 0
-            const outdated = version < REQUIRED_SERVER_VERSION;
-            const dismissKey = 'cpVerDismiss_' + REQUIRED_SERVER_VERSION;
-            let dismissed = false;
-            try { dismissed = localStorage.getItem(dismissKey) === '1'; } catch (e) {}
-            if (outdated && !dismissed && !document.getElementById('verBanner')) {
-                const d = document.createElement('div');
-                d.id = 'verBanner';
-                d.className = 'w-full max-w-xl bg-blue-50 border border-blue-200 text-blue-900 rounded-2xl p-4 text-xs leading-relaxed shadow-sm';
-                d.innerHTML =
-                    '<div class="flex items-start justify-between gap-3">' +
-                      '<div><p class="font-bold mb-0.5"><i class="fa-solid fa-circle-arrow-up mr-1"></i> Ada pembaruan server tersedia</p>' +
-                      'Aplikasi tetap berjalan normal. Perbarui kode server untuk mendapatkan fitur terbaru. Data dan link klien tidak hilang.</div>' +
-                      '<button type="button" id="verLater" class="shrink-0 font-bold text-blue-700 hover:underline">Nanti</button>' +
-                    '</div>' +
-                    '<details class="mt-2"><summary class="cursor-pointer font-bold">Cara memperbarui (sekitar 2 menit)</summary>' +
-                      '<ol class="list-decimal ml-5 mt-2 space-y-1">' +
-                        '<li>Tekan <b>Salin kode server terbaru</b> di bawah.</li>' +
-                        '<li>Buka Apps Script Anda, klik file <span class="font-mono">Code.gs</span>, pilih semua isinya lalu tempel, dan simpan (Ctrl+S). Jika Anda belum pernah mengganti password dari halaman Pengaturan Studio, isi lagi <span class="font-mono">ADMIN_KEY</span> di baris atas.</li>' +
-                        '<li><b>Deploy &gt; Manage deployments &gt; ikon pensil &gt; Version: New version &gt; Deploy.</b> Alamat server tetap sama.</li>' +
-                      '</ol>' +
-                      '<button type="button" id="verCopy" class="mt-2 px-3 py-1.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition"><i class="fa-solid fa-copy mr-1"></i> Salin kode server terbaru</button>' +
-                      '<span id="verCopyMsg" class="ml-2 text-[11px]"></span>' +
-                    '</details>' +
-                    '<p class="mt-2 text-[11px] text-blue-800/70">Versi server Anda: ' + version + ' &middot; terbaru: ' + REQUIRED_SERVER_VERSION + '</p>';
-                document.body.insertBefore(d, document.body.firstChild);
-                d.querySelector('#verLater').onclick = () => { try { localStorage.setItem(dismissKey, '1'); } catch (e) {} d.remove(); };
-                d.querySelector('#verCopy').onclick = async () => {
-                    const msg = d.querySelector('#verCopyMsg');
-                    try {
-                        const res = await fetch('Code.gs', { cache: 'no-store' });
-                        if (!res.ok) throw new Error('http ' + res.status);
-                        const text = await res.text();
-                        if (!/SERVER_VERSION/.test(text)) throw new Error('bukan Code.gs');
-                        await navigator.clipboard.writeText(text);
-                        msg.textContent = 'Tersalin. Lanjut ke langkah 2.';
-                    } catch (e) {
-                        msg.textContent = 'Tidak bisa menyalin otomatis. Buka file Code.gs dari paket website, lalu salin isinya.';
-                    }
-                };
-            }
-            return { version, required: REQUIRED_SERVER_VERSION, outdated };
+            const version = Number(r && r.version) || 0;
+            return { version, required: REQUIRED_SERVER_VERSION, outdated: version < REQUIRED_SERVER_VERSION };
         } catch (e) { return { version: null, required: REQUIRED_SERVER_VERSION, outdated: false }; }
     }
 
-    function logout() { clearSession(); location.replace(LOGIN_PAGE); }
+    function logout() { clearSession(); try { localStorage.removeItem('cp_list_cache'); } catch (e) {} location.replace(LOGIN_PAGE); }
 
     // Dipanggil oleh halaman admin. fn jalan jika ada sesi; jika tidak, ke login.html
     function onReady(fn) {
