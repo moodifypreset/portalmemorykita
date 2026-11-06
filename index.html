@@ -141,9 +141,10 @@
     <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-300">
         <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <div class="bg-slate-900 dark:bg-slate-700 text-white w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg">
+                <div id="headerIcon" class="bg-slate-900 dark:bg-slate-700 text-white w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg">
                     <i class="fa-solid fa-camera-retro"></i>
                 </div>
+                <div id="headerLogoBox" class="hidden bg-white rounded-xl px-2 h-10 items-center border border-slate-200 shadow-sm"><img id="headerLogo" alt="" draggable="false" class="h-7 max-w-[120px] object-contain"></div>
                 <div>
                     <h1 class="font-bold text-lg leading-tight tracking-tight text-slate-800 dark:text-white" id="headerVendorName">Client Portal</h1>
                     <p class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider" data-i18n="subtitle">Alat Seleksi Aman</p>
@@ -179,6 +180,7 @@
                 <div class="absolute inset-0 z-10 bg-gradient-to-t from-slate-950/90 via-slate-900/35 to-slate-900/25 pointer-events-none"></div>
 
                 <div class="relative z-20 max-w-6xl mx-auto px-4 h-full flex flex-col justify-end pb-8 md:pb-12">
+                    <div id="heroLogoBox" class="hidden bg-white/95 rounded-xl px-3 py-2 mb-3 w-fit shadow-lg"><img id="heroLogo" alt="" draggable="false" class="h-8 md:h-10 max-w-[180px] object-contain"></div>
                     <p id="heroVendor" class="text-[11px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/70 mb-3"></p>
                     <h2 class="text-3xl md:text-5xl font-bold text-white leading-tight drop-shadow-lg">
                         <span data-i18n="welcomeTitle">Hallo</span>, <span id="displayClientName" class="text-blue-300 capitalize">Kakak</span> 👋
@@ -236,9 +238,10 @@
         <div class="max-w-6xl mx-auto px-4 py-8 w-full">
             <div id="welcomeSection" class="hidden max-w-xl mx-auto mt-6 md:mt-12 bg-white dark:bg-slate-800 rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100 dark:border-slate-700 text-center relative overflow-hidden transition-colors duration-300">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-200 via-slate-800 to-slate-200 dark:from-slate-700 dark:via-blue-500 dark:to-slate-700"></div>
-                <div class="mx-auto mb-6 w-20 h-20 rounded-2xl bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center text-4xl shadow-lg">
+                <div id="welcomeIcon" class="mx-auto mb-6 w-20 h-20 rounded-2xl bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center text-4xl shadow-lg">
                     <i class="fa-solid fa-camera-retro"></i>
                 </div>
+                <div id="welcomeLogoBox" class="hidden mx-auto mb-6 w-fit max-w-full bg-white rounded-2xl px-5 py-3 border border-slate-200 shadow-sm"><img id="welcomeLogo" alt="" draggable="false" class="h-14 md:h-16 max-w-[220px] object-contain mx-auto"></div>
                 <h2 class="text-2xl md:text-3xl font-bold mb-3 text-slate-800 dark:text-white" data-i18n="welcomePageTitle">Selamat Datang 👋</h2>
                 <p class="text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed mb-6" data-i18n="welcomePageDesc">Ini adalah portal seleksi foto dari <span class='font-bold'>{vendor}</span>.</p>
                 <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 text-left flex gap-4 items-start">
@@ -893,11 +896,75 @@
         // pengaturan.js menjadi cadangan jika server belum diisi / tidak terjangkau.
         const SETTINGS_CACHE_KEY = 'cp_settings_v1';
 
+        // ----- Logo vendor (diunduh hanya saat versinya berubah, lalu disimpan di browser) -----
+        const LOGO_CACHE_KEY = 'cp_logo_v1';
+        let vendorLogo = null;            // { uri, w, h, white }
+        let logoFetching = '';
+        let watermarkBlobUrl = null;
+
+        function readLogoCache() { try { return JSON.parse(localStorage.getItem(LOGO_CACHE_KEY) || 'null'); } catch (e) { return null; } }
+
+        function ensureLogo(version, white) {
+            if (!version) { clearLogo(); try { localStorage.removeItem(LOGO_CACHE_KEY); } catch (e) {} return; }
+            const c = readLogoCache();
+            if (c && c.v === version && c.data) { applyLogo(c.data, white); return; }
+            if (logoFetching === version) return;
+            logoFetching = version;
+            serverCall('GET', { action: 'logo' }, 20000).then(res => {
+                if (res && res.ok && res.logo && res.version === version) {
+                    try { localStorage.setItem(LOGO_CACHE_KEY, JSON.stringify({ v: version, data: res.logo })); } catch (e) {}
+                    applyLogo(res.logo, white);
+                }
+            }).catch(() => {}).finally(() => { logoFetching = ''; });
+        }
+
+        function setLogoDom(uri) {
+            const show = (boxId, imgId, on, displayCls) => {
+                const box = document.getElementById(boxId), img = document.getElementById(imgId);
+                if (!box || !img) return;
+                if (on) { img.src = uri; box.classList.remove('hidden'); if (displayCls) box.classList.add(displayCls); }
+                else { box.classList.add('hidden'); if (displayCls) box.classList.remove(displayCls); img.removeAttribute('src'); }
+            };
+            const on = !!uri;
+            show('headerLogoBox', 'headerLogo', on, 'flex');
+            show('heroLogoBox', 'heroLogo', on, null);
+            show('welcomeLogoBox', 'welcomeLogo', on, null);
+            const hi = document.getElementById('headerIcon'), wi = document.getElementById('welcomeIcon');
+            if (hi) hi.classList.toggle('hidden', on);
+            if (wi) wi.classList.toggle('hidden', on);
+            updateHeaderHeightVar();
+        }
+
+        function refreshWatermarkLayers() {
+            watermarkDataUri = null;
+            const bg = getWatermarkDataUri();
+            document.querySelectorAll('.watermark-layer').forEach(el => { el.style.backgroundImage = bg; });
+        }
+
+        function applyLogo(uri, white) {
+            const im = new Image();
+            im.onload = () => {
+                vendorLogo = { uri, w: im.naturalWidth || 1, h: im.naturalHeight || 1, white: !!white };
+                setLogoDom(uri);
+                refreshWatermarkLayers();
+            };
+            im.onerror = () => clearLogo();
+            im.src = uri;
+        }
+
+        function clearLogo() {
+            if (!vendorLogo) return;
+            vendorLogo = null;
+            setLogoDom('');
+            refreshWatermarkLayers();
+        }
+
         function applySettings(st, { persist = true, refresh = true } = {}) {
             if (!st || typeof CONFIG_APP === 'undefined') return;
             if (st.namaVendor) CONFIG_APP.namaVendor = st.namaVendor;
             if (st.whatsappAdmin) CONFIG_APP.whatsappAdmin = st.whatsappAdmin;
             if (st.googleApiKey) CONFIG_APP.googleApiKey = st.googleApiKey;
+            ensureLogo(st.logoVersion || '', st.logoWmWhite === '1' || st.logoWmWhite === true);
             watermarkDataUri = null;   // watermark memakai nama studio
 
             const name = CONFIG_APP.namaVendor || 'Studio Foto';
@@ -914,7 +981,7 @@
             }
 
             if (persist) {
-                try { localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({ namaVendor: st.namaVendor || '', whatsappAdmin: st.whatsappAdmin || '', googleApiKey: st.googleApiKey || '' })); } catch (e) {}
+                try { localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({ namaVendor: st.namaVendor || '', whatsappAdmin: st.whatsappAdmin || '', googleApiKey: st.googleApiKey || '', logoVersion: st.logoVersion || '', logoWmWhite: st.logoWmWhite || '' })); } catch (e) {}
             }
             if (refresh) applyTranslations();   // teks sambutan memuat nama studio
         }
@@ -1240,6 +1307,19 @@
         let watermarkDataUri = null;
         function getWatermarkDataUri() {
             if (watermarkDataUri) return watermarkDataUri;
+            if (vendorLogo) {
+                // Watermark memakai logo vendor. Dibuat sebagai blob supaya string CSS tetap pendek
+                // (ratusan kartu foto tidak masing-masing membawa data gambar).
+                const sc = Math.min(150 / vendorLogo.w, 70 / vendorLogo.h);
+                const iw = Math.round(vendorLogo.w * sc), ih = Math.round(vendorLogo.h * sc);
+                const defs = vendorLogo.white ? `<defs><filter id='w' color-interpolation-filters='sRGB'><feColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/></filter></defs>` : '';
+                const svg = `<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='260' height='150'>${defs}` +
+                    `<g transform='rotate(-28 130 75)' opacity='0.38'><image xlink:href='${vendorLogo.uri}' x='${130 - iw / 2}' y='${75 - ih / 2}' width='${iw}' height='${ih}'${vendorLogo.white ? " filter='url(#w)'" : ''}/></g></svg>`;
+                if (watermarkBlobUrl) { try { URL.revokeObjectURL(watermarkBlobUrl); } catch (e) {} }
+                watermarkBlobUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+                watermarkDataUri = `url("${watermarkBlobUrl}")`;
+                return watermarkDataUri;
+            }
             const text = getVendorName();
             const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='260' height='150'>` +
                 `<text x='130' y='80' transform='rotate(-28 130 80)' font-family='Inter, Arial, sans-serif' ` +

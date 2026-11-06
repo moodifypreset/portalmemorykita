@@ -41,7 +41,11 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const LINK_HEADERS = ['Kode', 'Nama Klien', 'Folder ID', 'Kuota', 'Batas Waktu', 'Status', 'Proteksi', 'Watermark', 'Dibuat', 'No. WA'];
 const SEL_HEADERS = ['Kode', 'Nama Klien', 'Jumlah', 'Daftar Foto', 'Data (JSON)', 'Diperbarui'];
 // Pengaturan studio: kunci -> nilai awal (nama, nomor WA admin, template pesan WA)
-const SETTING_KEYS = ['namaVendor', 'whatsappAdmin', 'waTemplate', 'googleApiKey'];
+const SETTING_KEYS = ['namaVendor', 'whatsappAdmin', 'waTemplate', 'googleApiKey', 'logoVersion', 'logoWmWhite'];
+// Logo vendor disimpan sebagai data URI, dipecah ke beberapa baris (batas 1 sel Sheet = 50.000 karakter)
+const LOGO_KEYS = ['logo0', 'logo1', 'logo2'];
+const LOGO_CHUNK = 45000;
+const LOGO_MAX = LOGO_CHUNK * LOGO_KEYS.length;
 // Kolom Links (1-based)
 const L = { CODE: 1, NAME: 2, FOLDER: 3, KUOTA: 4, DEADLINE: 5, STATUS: 6, PROT: 7, WM: 8, CREATED: 9, PHONE: 10 };
 
@@ -73,6 +77,7 @@ function handle_(params, body) {
       case 'updateLink': return json_(actionUpdateLink_(src));
       case 'list':       return json_(actionList_(src));
       case 'settings':     return json_(actionSettings_(src));
+      case 'logo':         return json_(actionLogo_(src));
       case 'getSettings':  return json_(actionGetSettings_(src));
       case 'saveSettings': return json_(actionSaveSettings_(src));
       case 'login':          return json_(actionLogin_(src));
@@ -488,7 +493,7 @@ function readSettings_() {
 // Yang boleh dilihat klien (template pesan WA hanya untuk vendor)
 function publicSettings_() {
   const st = readSettings_();
-  return { namaVendor: st.namaVendor, whatsappAdmin: st.whatsappAdmin, googleApiKey: st.googleApiKey };
+  return { namaVendor: st.namaVendor, whatsappAdmin: st.whatsappAdmin, googleApiKey: st.googleApiKey, logoVersion: st.logoVersion, logoWmWhite: st.logoWmWhite };
 }
 
 function normalizePhone_(v) {
@@ -496,6 +501,22 @@ function normalizePhone_(v) {
   if (d.indexOf('0') === 0) d = '62' + d.slice(1);
   else if (d.indexOf('8') === 0) d = '62' + d;
   return d.slice(0, 20);
+}
+
+function readLogo_() {
+  const sh = ensureSheets_().set;
+  const last = sh.getLastRow();
+  if (last < 2) return '';
+  const rows = sh.getRange(2, 1, last - 1, 2).getValues();
+  const map = {};
+  rows.forEach(function (r) { map[String(r[0] || '').trim()] = String(r[1] === null || r[1] === undefined ? '' : r[1]); });
+  return LOGO_KEYS.map(function (k) { return map[k] || ''; }).join('');
+}
+
+// Publik: logo diambil klien hanya saat versinya berubah
+function actionLogo_(src) {
+  const st = readSettings_();
+  return { ok: true, version: st.logoVersion, logo: st.logoVersion ? readLogo_() : '' };
 }
 
 function actionSettings_(src) {
@@ -518,6 +539,20 @@ function actionSaveSettings_(src) {
     const key = String(incoming.googleApiKey || '').trim();
     if (key && !/^[A-Za-z0-9_-]{20,80}$/.test(key)) return { ok: false, error: 'bad_apikey' };
     clean.googleApiKey = key;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(incoming, 'logoWmWhite')) clean.logoWmWhite = truthy_(incoming.logoWmWhite) ? '1' : '';
+  if (Object.prototype.hasOwnProperty.call(incoming, 'logo')) {
+    const logo = String(incoming.logo || '').trim();
+    if (logo === '') {
+      clean.logoVersion = '';
+      LOGO_KEYS.forEach(function (k) { clean[k] = ''; });
+    } else {
+      if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+\/=]+$/.test(logo)) return { ok: false, error: 'bad_logo' };
+      if (logo.length > LOGO_MAX) return { ok: false, error: 'logo_too_big' };
+      clean.logoVersion = String(Date.now());
+      LOGO_KEYS.forEach(function (k, i) { clean[k] = logo.slice(i * LOGO_CHUNK, (i + 1) * LOGO_CHUNK); });
+    }
   }
 
   const lock = LockService.getScriptLock();

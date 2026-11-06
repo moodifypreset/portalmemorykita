@@ -67,6 +67,8 @@
             admin_key_not_set: 'ADMIN_KEY di Code.gs belum diganti dari nilai bawaan.',
             bad_folder: 'Link / ID folder Google Drive tidak valid.',
             bad_apikey: 'Google API Key tidak valid (huruf/angka/_/- , 20-80 karakter).',
+            bad_logo: 'Format logo tidak valid (harus PNG, JPG, atau WebP).',
+            logo_too_big: 'Logo terlalu besar. Pilih gambar yang lebih sederhana.',
             not_found: 'Link tidak ditemukan di Sheet.',
             unknown_action: 'Code.gs di server belum versi terbaru. Tempel kode baru lalu Deploy > New version.'
         };
