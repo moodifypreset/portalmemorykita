@@ -368,11 +368,33 @@
                     </div>
                     <div class="flex flex-wrap gap-2 pt-1">
                         <button onclick="copyClientLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition"><i class="fa-solid fa-copy mr-1"></i>Salin Link</button>
+                        <button onclick="sendToSorter('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition ${l.selectedCount ? '' : 'opacity-50'}" title="Kirim daftar foto pilihan klien langsung ke Auto RAW Sorter"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Pakai di RAW Sorter</button>
                         <button onclick="extendLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-blue-600 hover:text-blue-600 transition"><i class="fa-solid fa-calendar-plus mr-1"></i>Perpanjang</button>
                         <button onclick="toggleLinkClosed('${l.code}', ${l.closed ? 'false' : 'true'})" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-red-500 hover:text-red-600 transition"><i class="fa-solid ${l.closed ? 'fa-lock-open' : 'fa-lock'} mr-1"></i>${l.closed ? 'Buka Lagi' : 'Tutup Sekarang'}</button>
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // Ambil daftar foto pilihan klien dari server lalu buka Auto RAW Sorter dengan daftar sudah terisi
+        async function sendToSorter(code) {
+            const link = currentLinks.find(l => l.code === code) || {};
+            const tab = window.open('', '_blank');   // dibuka sekarang agar tidak diblokir popup blocker
+            try {
+                const res = await Admin.call({ action: 'get', c: code });
+                const items = (res && res.ok && res.selection && res.selection.items) || [];
+                if (!items.length) {
+                    if (tab) tab.close();
+                    return showAlert('Klien ini belum memilih foto.', true);
+                }
+                localStorage.setItem('cpSorterImport', JSON.stringify({
+                    name: link.name || '', code: code, t: Date.now(), names: items.map(i => i.name)
+                }));
+                if (tab) tab.location.href = 'admin.html'; else location.href = 'admin.html';
+            } catch (e) {
+                if (tab) tab.close();
+                showAlert('Server tidak dapat dihubungi.', true);
+            }
         }
 
         function clientLinkFor(code) {

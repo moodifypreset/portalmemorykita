@@ -123,6 +123,22 @@
         let sessionCopiedNames = {};
 
         window.addEventListener('DOMContentLoaded', () => {
+            // Daftar foto kiriman dari generatorLink.html (tombol "Pakai di RAW Sorter")
+            try {
+                const raw = localStorage.getItem('cpSorterImport');
+                if (raw) {
+                    localStorage.removeItem('cpSorterImport');
+                    const imp = JSON.parse(raw);
+                    if (imp && Array.isArray(imp.names) && Date.now() - imp.t < 10 * 60 * 1000) {
+                        const unique = [...new Set(imp.names.map(n => String(n).trim()).filter(Boolean))];
+                        document.getElementById('fileList').value = unique.join('\n');
+                        const infoEl = document.getElementById('cleanInfo');
+                        infoEl.classList.remove('hidden');
+                        infoEl.className = "text-[11px] text-green-600 mt-2";
+                        infoEl.innerText = `Daftar dimuat otomatis dari pilihan klien${imp.name ? ' "' + imp.name + '"' : ''}: ${unique.length} foto.`;
+                    }
+                }
+            } catch (e) {}
             if ("Notification" in window && Notification.permission === "default") {
                 Notification.requestPermission();
             }
