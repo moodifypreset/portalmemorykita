@@ -869,8 +869,8 @@
             try {
                 let res;
                 if (method === 'GET') {
-                    const qs = new URLSearchParams(payload).toString();
-                    res = await fetch(base + (base.includes('?') ? '&' : '?') + qs, { signal: ctrl.signal, cache: 'no-store' });
+                    const qs = new URLSearchParams(Object.assign({}, payload, { _t: Date.now() })).toString();
+                    res = await fetch(base + (base.includes('?') ? '&' : '?') + qs, { signal: ctrl.signal });
                 } else {
                     // text/plain = "simple request": tidak memicu preflight CORS yang tidak didukung Apps Script
                     res = await fetch(base, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctrl.signal });
@@ -886,6 +886,7 @@
             if (!data || !data.ok) {
                 const err = new Error((data && data.error) || 'server');
                 err.serverCode = data && data.error;
+                err.detail = data && data.message;
                 throw err;
             }
             if (data.now) appState.timeOffset = data.now - Math.round((t0 + t1) / 2);   // jam server = acuan
@@ -996,8 +997,12 @@
                 data = await loadRemoteConfig(code);
             } catch (e) {
                 if (e.serverCode === 'not_found') return showInvalidLink(t('errLinkInvalid'));
+                console.error('Gagal memuat konfigurasi dari server:', e);
                 const cached = readCfgCache(code);
-                if (!cached) return showInvalidLink(t('errLinkLoad'));
+                if (!cached) {
+                    const why = e.serverCode ? (e.serverCode + (e.detail ? ': ' + e.detail : '')) : (e.message || 'jaringan');
+                    return showInvalidLink(t('errLinkLoad') + ' [' + why + ']');
+                }
                 data = cached; offline = true;   // server tidak terjangkau: pakai salinan terakhir
             }
 
