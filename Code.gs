@@ -29,7 +29,7 @@ const DEFAULT_ADMIN_KEY = 'GANTI-DENGAN-KUNCI-RAHASIA';   // jangan diubah (pena
 // ====== VERSI SERVER ======
 // Naik hanya jika rilis baru membutuhkan perubahan di Code.gs. Website (adminAuth.js,
 // REQUIRED_SERVER_VERSION) membandingkan angka ini dan menampilkan peringatan update.
-const SERVER_VERSION = 3;
+const SERVER_VERSION = 1;
 
 // ====== PENGATURAN ======
 const SHEET_LINKS = 'Links';
