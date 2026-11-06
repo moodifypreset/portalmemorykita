@@ -12,6 +12,7 @@
     </style>
     <script src="pengaturan.js"></script>
     <script src="adminAuth.js"></script>
+    <script src="tour.js"></script>
 </head>
 <body class="text-slate-800 flex flex-col items-center justify-center min-h-screen p-4 py-10 gap-6">
 
@@ -29,6 +30,7 @@
             </div>
             <div class="shrink-0 flex gap-2">
                 <a id="lnkStudio" href="pengaturanStudio.html" class="text-xs font-bold text-slate-300 hover:text-white transition border border-slate-600 hover:border-slate-400 rounded-lg px-3 py-2"><i class="fa-solid fa-sliders mr-1"></i> Pengaturan</a>
+                <button id="btnTour" onclick="startTour(true)" class="text-xs font-bold text-slate-300 hover:text-white transition border border-slate-600 hover:border-slate-400 rounded-lg px-3 py-2" title="Ulangi tur panduan"><i class="fa-solid fa-circle-question mr-1"></i> Tur</button>
                 <button id="btnLogout" onclick="Admin.logout()" class="text-xs font-bold text-slate-300 hover:text-white transition border border-slate-600 hover:border-slate-400 rounded-lg px-3 py-2"><i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar</button>
             </div>
         </div>
@@ -182,7 +184,44 @@
         });
 
         // Dipanggil setiap kali admin berhasil masuk
-        Admin.onReady(() => { loadServerSettings(true); loadLinkList(true); });
+        const TOUR_WELCOME = 'cp_tour_welcome_v1', TOUR_GEN = 'cp_tour_generator_v1';
+        let settingsComplete = null;   // null = belum diketahui
+
+        function startTour(manual) {
+            if (manual) return runGenTour(true);
+            if (settingsComplete === null) return;
+            if (!settingsComplete) {
+                if (Tour.seen(TOUR_WELCOME)) return;
+                Tour.start({
+                    key: TOUR_WELCOME,
+                    labels: { done: 'Buka Pengaturan Studio', skip: 'Nanti saja' },
+                    steps: [{ title: 'Selamat datang! 👋', text: 'Sebelum membuat link untuk klien, lengkapi dulu <b>Pengaturan Studio</b>: nama studio, logo, nomor WhatsApp, dan Google Drive API Key. Cukup diisi satu kali. Kami pandu langkah demi langkah.' }],
+                    onEnd: (completed) => { if (completed) location.href = 'pengaturanStudio.html'; }
+                });
+                return;
+            }
+            runGenTour(false);
+        }
+
+        function runGenTour(manual) {
+            if (!manual && Tour.seen(TOUR_GEN)) return;
+            Tour.start({
+                key: TOUR_GEN,
+                steps: [
+                    { title: 'Membuat link untuk klien', text: 'Tiga langkah: isi data klien, tempel folder Google Drive, lalu buat link. Link yang dihasilkan singkat dan siap dikirim lewat WhatsApp.' },
+                    { el: '#clientName', title: 'Nama klien', text: 'Nama ini muncul di halaman klien dan di daftar foto pilihan. Opsional, tapi disarankan.' },
+                    { el: '#driveLink', title: 'Folder Google Drive', text: 'Tempel link folder foto klien. Pastikan folder sudah dibagikan sebagai <b>"Siapa saja yang memiliki link"</b>.' },
+                    { el: '#btnGenerate', title: 'Buat link', text: 'Tekan untuk membuat link. Anda juga bisa mengatur kuota foto, batas waktu, proteksi, dan watermark sebelumnya.' },
+                    { el: '#linkList', title: 'Link klien & pilihan', text: 'Di sini Anda memantau pilihan klien secara langsung: salin link, perpanjang waktu, atau tutup link. Tombol <b>Pakai di RAW Sorter</b> mengirim daftar foto pilihan langsung ke Auto RAW Sorter.' },
+                    { el: '#btnTour', title: 'Butuh bantuan lagi?', text: 'Tekan <b>Tur</b> kapan saja untuk mengulang panduan ini.' }
+                ]
+            });
+        }
+
+        // Dipanggil setiap kali admin berhasil masuk
+        Admin.onReady(() => {
+            Promise.all([Promise.resolve(loadServerSettings(true)), Promise.resolve(loadLinkList(true))]).then(() => setTimeout(() => startTour(false), 500));
+        });
 
         function saveTemplate() {
             const currentText = document.getElementById('waTemplate').value;
@@ -317,6 +356,7 @@
                 const res = await Admin.call({ action: 'getSettings' });
                 if (!res.ok) return;
                 const st = res.settings || {};
+                settingsComplete = !!(st.namaVendor && st.googleApiKey);
                 if (st.waTemplate) { document.getElementById('waTemplate').value = st.waTemplate; saveTemplate(); }
             } catch (e) { /* pakai template tersimpan di browser */ }
         }

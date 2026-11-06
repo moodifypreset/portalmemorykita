@@ -132,6 +132,7 @@
     </style>
     
     <script src="pengaturan.js"></script>
+    <script src="tour.js"></script>
 </head>
 <body class="text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 pb-32 flex flex-col min-h-screen">
 
@@ -470,6 +471,7 @@
             <button onclick="closeTutorial()" class="w-full py-4 bg-slate-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg text-sm uppercase tracking-wider" data-i18n="btnTut">
                 Mengerti, Mulai Memilih!
             </button>
+            <button onclick="closeTutorial(); setTimeout(() => startClientTour(true), 450);" class="w-full mt-3 py-3 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 font-bold rounded-xl transition text-xs" data-i18n="btnTourReplay"><i class="fa-solid fa-route mr-1"></i> Ulangi Tur Interaktif</button>
         </div>
     </div>
 
@@ -1567,6 +1569,14 @@
                 gridTip: "Ubah Baris Foto",
                 reshuffleTip: "Tekan ini untuk acak foto",
                 btnMyPicks: "Pilihan Fotoku",
+                btnTourReplay: "<i class=\"fa-solid fa-route mr-1\"></i> Ulangi Tur Interaktif",
+                tourNext: "Lanjut", tourPrev: "Kembali", tourSkip: "Lewati", tourDone: "Mulai Memilih", tourStep: "Langkah {i} dari {n}",
+                tourT1: "Selamat datang! 👋", tourD1: "Tur singkat ini menunjukkan cara memilih foto. Hanya tampil sekali, dan bisa dilewati kapan saja.",
+                tourT2: "Pilih foto favorit", tourD2: "<b>Ketuk foto</b> untuk memilihnya (muncul tanda centang). Ketuk ikon kaca pembesar untuk memperbesar dan menambah catatan edit.",
+                tourT3: "Urutan foto", tourD3: "Lihat foto dalam <b>Urutan Asli</b> (sesuai jam pemotretan) atau <b>Acak</b>.",
+                tourT4: "Pilihan Fotoku", tourD4: "Tekan menu ini kapan saja untuk melihat foto yang sudah Anda pilih beserta jumlahnya.",
+                tourT5: "Memilih berdua", tourD5: "Pasangan Anda bisa membuka <b>link yang sama</b> di HP-nya. Pilihan kalian digabung otomatis dan tersimpan, jadi tidak saling menimpa.",
+                tourT6: "Selesai memilih?", tourD6: "Setelah memilih, tombol di bagian bawah layar akan muncul. Tekan <b>Kirim</b>, konfirmasi bahwa tidak ada perubahan, lalu kirim daftar ke admin lewat WhatsApp.",
                 partnerOnline: "Pasangan Anda sedang memilih foto juga",
                 partnerChip: "Pasangan online",
                 partnerAdded: "Pasangan Anda menambahkan {n} foto ke pilihan",
@@ -1656,6 +1666,14 @@
                 gridTip: "Change Grid Rows",
                 reshuffleTip: "Click to reshuffle",
                 btnMyPicks: "My Picks",
+                btnTourReplay: "<i class=\"fa-solid fa-route mr-1\"></i> Replay Interactive Tour",
+                tourNext: "Next", tourPrev: "Back", tourSkip: "Skip", tourDone: "Start Choosing", tourStep: "Step {i} of {n}",
+                tourT1: "Welcome! 👋", tourD1: "This quick tour shows you how to pick your photos. It only appears once and you can skip it anytime.",
+                tourT2: "Choose your favorites", tourD2: "<b>Tap a photo</b> to select it (a check mark appears). Tap the magnifier icon to zoom in and add an editing note.",
+                tourT3: "Photo order", tourD3: "View photos in <b>Original order</b> (by shooting time) or <b>Random</b>.",
+                tourT4: "My Picks", tourD4: "Tap this menu anytime to see the photos you have selected and how many.",
+                tourT5: "Choosing together", tourD5: "Your partner can open the <b>same link</b> on their phone. Your picks are merged and saved automatically, so nobody overwrites the other.",
+                tourT6: "Done choosing?", tourD6: "Once you select photos, the bar at the bottom appears. Tap <b>Send</b>, confirm there are no more changes, then send the list to the admin via WhatsApp.",
                 partnerOnline: "Your partner is choosing photos too",
                 partnerChip: "Partner online",
                 partnerAdded: "Your partner added {n} photo(s) to the selection",
@@ -1862,6 +1880,26 @@
             showAlert(lang, 'success');
         }
 
+        // ----- Tur interaktif untuk klien (otomatis hanya sekali per perangkat) -----
+        const CLIENT_TOUR_KEY = 'cp_tour_client_v1';
+        function startClientTour(manual) {
+            if (!manual && Tour.seen(CLIENT_TOUR_KEY)) return;
+            if (Tour.isActive()) return;
+            Tour.start({
+                key: CLIENT_TOUR_KEY,
+                labels: { next: t('tourNext'), prev: t('tourPrev'), skip: t('tourSkip'), done: t('tourDone'), step: t('tourStep') },
+                steps: [
+                    { title: t('tourT1'), text: t('tourD1') },
+                    { el: '.photo-card', title: t('tourT2'), text: t('tourD2') },
+                    { el: '#sortDropdown', title: t('tourT3'), text: t('tourD3') },
+                    { el: '#myPicksBtn', title: t('tourT4'), text: t('tourD4') },
+                    { title: t('tourT5'), text: t('tourD5') },
+                    { el: '#actionBar', title: t('tourT6'), text: t('tourD6') }
+                ],
+                onEnd: () => { try { triggerTooltipsAnimation(); } catch (e) {} }
+            });
+        }
+
         function showTutorial(forceManual = false) {
             if (hasSeenTutorial && !forceManual) return;
             const modal = document.getElementById('tutorialModal');
@@ -2023,7 +2061,7 @@
                     if (result.stale) showAlert(t('alertCached'), 'error');
 
                     if (!overrideFolderId) {
-                        setTimeout(() => { showTutorial(false); }, 800);
+                        setTimeout(() => { startClientTour(false); }, 800);
                     } else {
                         if (hasSeenTutorial) setTimeout(triggerTooltipsAnimation, 500);
                     }
