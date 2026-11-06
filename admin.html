@@ -78,10 +78,21 @@
 
             <!-- Panel Kanan: Input List -->
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col">
-                <h2 class="font-bold text-lg text-slate-800 border-b border-slate-100 pb-3 mb-4"><i class="fa-solid fa-paste mr-2 text-blue-600"></i> List Foto dari Klien</h2>
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                    <h2 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-paste mr-2 text-blue-600"></i> List Foto dari Klien</h2>
+                    <button id="btnClean" onclick="cleanFileList()" title="Buang semua teks selain kode file (nomor urut, catatan, tag folder, dll)" class="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 border border-slate-200">
+                        <i class="fa-solid fa-broom text-blue-500"></i> Bersihkan List
+                    </button>
+                </div>
                 <textarea id="fileList" class="w-full flex-grow bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-600 outline-none transition resize-none font-mono shadow-inner" placeholder="Paste daftar nama file dari WhatsApp klien di sini..."></textarea>
+                <p id="cleanInfo" class="text-[11px] text-slate-400 mt-2 hidden"></p>
             </div>
         </div>
+
+        <label class="flex items-center gap-2 mb-4 text-sm text-slate-600 select-none cursor-pointer w-fit">
+            <input type="checkbox" id="notifToggle" checked onchange="handleNotifToggle()" class="w-4 h-4 rounded accent-blue-600">
+            <i class="fa-solid fa-bell text-slate-400"></i> Notifikasi suara & desktop saat proses selesai
+        </label>
 
         <button id="processBtn" onclick="processFiles()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg">
             <i class="fa-solid fa-bolt"></i> Mulai Sortir & Copy File
@@ -108,6 +119,14 @@
     <script>
         let sourceHandle = null;
         let destHandle = null;
+        // Variabel untuk melacak duplikasi hanya pada SESI INI SAJA
+        let sessionCopiedNames = {};
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if ("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+        });
 
         async function selectSource() {
             try {
@@ -135,6 +154,83 @@
             } catch (err) {
                 console.log("Pemilihan folder tujuan dibatalkan.", err);
             }
+        }
+
+        function handleNotifToggle() {
+            const toggle = document.getElementById('notifToggle');
+            if (toggle.checked && "Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+        }
+
+        function playDoneSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const playBeep = (freq, startTime, duration) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = "sine";
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.15, startTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(startTime);
+                    osc.stop(startTime + duration);
+                };
+                const now = ctx.currentTime;
+                playBeep(880, now, 0.15);
+                playBeep(1175, now + 0.18, 0.2);
+            } catch (err) {
+                console.log("Tidak bisa memutar suara notifikasi.", err);
+            }
+        }
+
+        function showDoneNotification(title, body) {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+            try {
+                new Notification(title, { body, icon: "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/svgs/solid/bolt.svg" });
+            } catch (err) {
+                console.log("Tidak bisa menampilkan notifikasi desktop.", err);
+            }
+        }
+
+        function notifyProcessDone(title, body) {
+            const toggle = document.getElementById('notifToggle');
+            if (!toggle || !toggle.checked) return;
+            playDoneSound();
+            showDoneNotification(title, body);
+        }
+
+        function cleanFileList() {
+            const textarea = document.getElementById('fileList');
+            const infoEl = document.getElementById('cleanInfo');
+            const rawText = textarea.value;
+
+            if (!rawText.trim()) {
+                infoEl.classList.remove('hidden');
+                infoEl.className = "text-[11px] text-red-500 mt-2";
+                infoEl.innerText = "List masih kosong, tidak ada yang bisa dibersihkan.";
+                return;
+            }
+
+            const rawList = parseClientList(rawText);
+            const uniqueList = [...new Set(rawList)];
+            const duplicateCount = rawList.length - uniqueList.length;
+
+            if (uniqueList.length === 0) {
+                infoEl.classList.remove('hidden');
+                infoEl.className = "text-[11px] text-red-500 mt-2";
+                infoEl.innerText = "Tidak ada kode file yang bisa dikenali dari list ini.";
+                return;
+            }
+
+            textarea.value = uniqueList.join('\n');
+
+            infoEl.classList.remove('hidden');
+            infoEl.className = "text-[11px] text-green-600 mt-2";
+            infoEl.innerText = `Dibersihkan: ${uniqueList.length} kode file unik` +
+                (duplicateCount > 0 ? ` (${duplicateCount} duplikat dirangkum).` : '.');
         }
 
         function clearLog() {
@@ -167,80 +263,116 @@
             let name = filename.trim().toUpperCase();
             const dotIndex = name.lastIndexOf('.');
             if (dotIndex !== -1) {
-                return name.substring(0, dotIndex).trim();
+                name = name.substring(0, dotIndex);
             }
-            return name.trim();
+            // Buang semua spasi di dalam nama (bukan cuma di awal/akhir), supaya
+            // konsisten dengan cleanName di parseClientList.
+            return name.replace(/\s+/g, '').trim();
         }
 
-        // FUNGSI BARU: Parser Cerdas yang Telah Diperbarui
+        // FUNGSI PARSER CERDAS (Anti Spasi Siluman WA)
         function parseClientList(rawText) {
             let list = [];
             const lines = rawText.split('\n');
             
             for (let line of lines) {
-                line = line.trim();
+                line = line.replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim();
                 const upperLine = line.toUpperCase();
                 
-                // 1. Abaikan baris metadata dengan pencocokan yang lebih luas
                 if (!line || 
                     line.startsWith('=') || 
                     line.startsWith('*') || 
+                    upperLine.includes('LIST FOTO') ||
                     upperLine.includes('LAYANAN') || 
                     upperLine.includes('KLIEN') || 
                     upperLine.includes('TOTAL') || 
                     upperLine.includes('CATATAN:') || 
-                    upperLine.includes('DICETAK OTOMATIS')) {
+                    upperLine.includes('DICETAK OTOMATIS') ||
+                    upperLine.includes('DIKIRIM DARI')) {
                     continue;
                 }
                 
-                // 2. Hapus angka urutan list (contoh: "1. FOY_1171.JPG" -> "FOY_1171.JPG")
-                let cleanName = line.replace(/^\d+\.\s*/, '').trim();
+                // Hapus prefix penomoran list (mis. "1. ", "12) ", "3- ") TAPI jangan sampai
+                // "memakan" titik ekstensi kode file yang murni angka (mis. "0045.CR2").
+                let cleanName = line;
+                // \s ikut dimasukkan ke dalam pola supaya nomor urut dengan spasi
+                // di posisi manapun (mis. "1. DSC0001", "1 . DSC0001", "1.   DSC0001")
+                // tetap terdeteksi sebagai satu blok prefix.
+                const prefixMatch = line.match(/^[\d\.\-\)\s]+/);
+                if (prefixMatch) {
+                    const prefixHasDot = prefixMatch[0].includes('.');
+                    const stripped = line.slice(prefixMatch[0].length).trim();
+                    // Aman untuk dipotong hanya jika: prefix yg dibuang tidak mengandung titik,
+                    // ATAU sisa teksnya masih punya titik (berarti titik ekstensi asli masih utuh).
+                    if (stripped.length > 0 && (!prefixHasDot || stripped.includes('.'))) {
+                        cleanName = stripped;
+                    }
+                }
 
-                // 3. Hapus keterangan folder di belakang jika ada (contoh: "_[Folder: 1. RAW File (JPG)]_")
-                // Regex ini akan menghapus apapun mulai dari "[Folder:" beserta karakter penutupnya
-                cleanName = cleanName.replace(/\s*_?\[Folder:.*\]_?/i, '').trim();
-                
-                // 4. Hapus ekstensi file dengan aman karena teks folder sudah dibuang
+                cleanName = cleanName.replace(/\s*_?\[folder\s*:.*\]_?/i, '').trim();
+                cleanName = cleanName.replace(/⭐/g, '').trim();
+
                 const dotIndex = cleanName.lastIndexOf('.');
                 if (dotIndex !== -1) {
                     cleanName = cleanName.substring(0, dotIndex);
                 }
                 
-                // 5. Ubah ke huruf kapital untuk pencocokan yang akurat
-                cleanName = cleanName.trim().toUpperCase();
+                // Buang semua spasi di dalam kode (bukan cuma di awal/akhir) supaya
+                // spasi "siluman" dari copy-paste WA tidak bikin kode jadi tidak match.
+                cleanName = cleanName.replace(/\s+/g, '').trim().toUpperCase();
                 
-                if (cleanName) {
+                if (cleanName && cleanName.length > 1) {
                     list.push(cleanName);
                 }
             }
             
-            return [...new Set(list)]; 
+            return list; 
         }
 
-        async function searchFilesInDirectory(dirHandle, notFoundList, copiedCountRef, totalTarget) {
+        // FUNGSI PENCARIAN REKURSIF (Mencari terus tanpa henti untuk mendeteksi file beda kamera)
+        async function searchFilesInDirectory(dirHandle, targetList, foundSet, copiedCountRef) {
             for await (const entry of dirHandle.values()) {
                 if (entry.kind === 'file') {
                     const fileBaseName = getBaseName(entry.name);
-                    const listIndex = notFoundList.findIndex(t => t === fileBaseName);
                     
-                    if (listIndex !== -1) {
-                        addLog(`Menemukan: ${entry.name} (di folder /${dirHandle.name})`, "success");
+                    if (targetList.includes(fileBaseName)) {
                         const file = await entry.getFile();
-                        const newFileHandle = await destHandle.getFileHandle(entry.name, { create: true });
+                        let finalSaveName = entry.name;
+                        
+                        // CEK DUPLIKASI KHUSUS SESI INI (Mendeteksi file bernama sama dari beda sub-folder kamera).
+                        // Kunci dibuat case-insensitive (huruf besar semua) karena banyak sistem operasi
+                        // (Windows, macOS) menganggap "DSC0001.JPG" dan "dsc0001.jpg" sebagai file YANG SAMA
+                        // -> tanpa ini, file kedua bisa diam-diam menimpa file pertama di folder tujuan.
+                        const dupKey = entry.name.toUpperCase();
+                        if (sessionCopiedNames[dupKey] !== undefined) {
+                            sessionCopiedNames[dupKey]++;
+                            const counter = sessionCopiedNames[dupKey];
+                            
+                            const dotIndex = entry.name.lastIndexOf('.');
+                            const baseName = dotIndex !== -1 ? entry.name.substring(0, dotIndex) : entry.name;
+                            const extension = dotIndex !== -1 ? entry.name.substring(dotIndex) : '';
+                            
+                            finalSaveName = `${baseName} (${counter})${extension}`;
+                            addLog(`⚠️ File kamera berbeda! Disalin sbg: ${finalSaveName} (dari /${dirHandle.name})`, "warning");
+                        } else {
+                            sessionCopiedNames[dupKey] = 0;
+                            addLog(`Menemukan: ${entry.name} (dari folder /${dirHandle.name})`, "success");
+                        }
+                        
+                        // Menimpa (overwrite) file jika memang sudah ada dari proses hari sebelumnya
+                        const newFileHandle = await destHandle.getFileHandle(finalSaveName, { create: true });
                         const writable = await newFileHandle.createWritable();
                         await writable.write(file);
                         await writable.close();
                         
                         copiedCountRef.count++;
-                        document.getElementById('progressText').innerText = `${copiedCountRef.count} / ${totalTarget} File Tercopy`;
+                        document.getElementById('progressText').innerText = `${copiedCountRef.count} File Tercopy`;
                         
-                        notFoundList.splice(listIndex, 1);
+                        foundSet.add(fileBaseName);
                     }
                 } else if (entry.kind === 'directory') {
-                    await searchFilesInDirectory(entry, notFoundList, copiedCountRef, totalTarget);
+                    await searchFilesInDirectory(entry, targetList, foundSet, copiedCountRef);
                 }
-                
-                if (notFoundList.length === 0) return;
             }
         }
 
@@ -251,7 +383,10 @@
             }
 
             const rawListText = document.getElementById('fileList').value;
-            const targetList = parseClientList(rawListText);
+            const rawList = parseClientList(rawListText);
+            
+            const targetList = [...new Set(rawList)];
+            const duplicateCount = rawList.length - targetList.length;
 
             if (targetList.length === 0) {
                 alert("Tidak ada nama file yang bisa diekstrak dari list. Pastikan format list benar!");
@@ -261,38 +396,54 @@
             const btn = document.getElementById('processBtn');
             btn.disabled = true;
             btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Sedang Memproses...`;
-            
             btn.classList.replace('bg-blue-600', 'bg-slate-400');
             btn.classList.replace('hover:bg-blue-700', 'hover:bg-slate-500');
             btn.classList.remove('shadow-blue-600/30');
             
             clearLog();
-            addLog(`Memulai proses sortir untuk ${targetList.length} file foto unik...`);
-            addLog(`Sistem mencari otomatis ke dalam seluruh sub-folder.`);
+            
+            if (duplicateCount > 0) {
+                addLog(`INFO: Ditemukan ${duplicateCount} foto yang ditulis ganda oleh klien. Sistem merangkumnya.`, "warning");
+            }
+            
+            addLog(`Memulai proses sortir untuk ${targetList.length} nama unik...`);
+            addLog(`Sistem akan memindai seluruh sub-folder untuk mencari duplikat antar kamera.`);
             
             let copiedCountRef = { count: 0 }; 
-            let notFoundList = [...targetList]; 
+            let foundSet = new Set();
+            sessionCopiedNames = {}; // RESET pelacak duplikat untuk sesi baru
 
             try {
-                await searchFilesInDirectory(sourceHandle, notFoundList, copiedCountRef, targetList.length);
+                // Memindai secara total
+                await searchFilesInDirectory(sourceHandle, targetList, foundSet, copiedCountRef);
+
+                const notFoundList = targetList.filter(name => !foundSet.has(name));
 
                 addLog(`----------------------------------------`);
-                addLog(`PROSES SELESAI! Berhasil menyalin ${copiedCountRef.count} file.`, "success");
+                addLog(`PROSES SELESAI! Berhasil menyalin total ${copiedCountRef.count} file.`, "success");
                 
                 if (notFoundList.length > 0) {
                     addLog(`PERINGATAN: Ada ${notFoundList.length} file yang tidak ditemukan di seluruh folder!`, "error");
-                    addLog(`Daftar file tidak ditemukan: ${notFoundList.join(', ')}`, "warning");
+                    addLog(`Daftar file tidak ditemukan: ${notFoundList.join(', ')}`, "error");
+                    notifyProcessDone(
+                        "Sortir Selesai (Ada yang Terlewat)",
+                        `${copiedCountRef.count} file tersalin, ${notFoundList.length} file tidak ditemukan.`
+                    );
                 } else {
                     addLog(`Luar biasa! Seluruh foto dari list berhasil ditemukan dan disalin.`, "success");
+                    notifyProcessDone(
+                        "Sortir Selesai",
+                        `Semua ${copiedCountRef.count} file berhasil disalin.`
+                    );
                 }
 
             } catch (error) {
                 console.error(error);
                 addLog(`Proses terhenti karena error: ${error.message}`, "error");
+                notifyProcessDone("Sortir Terhenti", `Proses berhenti karena error: ${error.message}`);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<i class="fa-solid fa-bolt mr-2"></i> Mulai Sortir & Copy File`;
-                
                 btn.classList.replace('bg-slate-400', 'bg-blue-600');
                 btn.classList.replace('hover:bg-slate-500', 'hover:bg-blue-700');
                 btn.classList.add('shadow-blue-600/30');

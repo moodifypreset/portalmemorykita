@@ -10,9 +10,11 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
     </style>
+    <script src="pengaturan.js"></script>
 </head>
-<body class="text-slate-800 flex items-center justify-center min-h-screen p-4">
+<body class="text-slate-800 flex flex-col items-center justify-center min-h-screen p-4 py-10 gap-6">
 
+    <!-- BOX UTAMA: GENERATOR LINK -->
     <div class="bg-white max-w-xl w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
         <div class="bg-slate-900 px-6 py-5 flex items-center gap-4">
             <div class="bg-white/20 text-white w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-inner">
@@ -20,74 +22,103 @@
             </div>
             <div>
                 <h1 class="font-bold text-white text-lg">Secure Link Generator</h1>
-                <p class="text-slate-400 text-xs font-medium uppercase tracking-wider">With Quota Hashing & WA Direct</p>
+                <p class="text-slate-400 text-xs font-medium uppercase tracking-wider">With Quota Hashing & Protection</p>
             </div>
         </div>
 
         <div class="p-6 md:p-8 space-y-5">
-            
-            <div class="hidden">
-                <input type="text" id="baseUrl">
-            </div>
+            <div class="hidden"><input type="text" id="baseUrl"></div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <!-- Kolom Nama -->
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2">Nama Klien (Opsional)</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <i class="fa-solid fa-user-tag text-slate-400"></i>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Klien (Opsional)</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-user-tag text-slate-400"></i>
+                            </div>
+                            <input type="text" id="clientName" placeholder="Cth: Stefany and Jansen" class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
                         </div>
-                        <input type="text" id="clientName" placeholder="Cth: Deni Maria"
-                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-blue-600 outline-none transition text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">No. WA Klien (Opsional)</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-brands fa-whatsapp text-slate-400"></i>
+                            </div>
+                            <input type="number" id="clientPhone" placeholder="Cth: 08123456..." class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
+                        </div>
                     </div>
                 </div>
-
-                <!-- Kolom WA Klien -->
                 <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2">No. WA Klien (Opsional)</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Link Google Drive Asli <span class="text-red-500">*</span></label>
                     <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <i class="fa-brands fa-whatsapp text-slate-400"></i>
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-brands fa-google-drive text-slate-400"></i>
                         </div>
-                        <input type="number" id="clientPhone" placeholder="Cth: 08123456..."
-                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-blue-600 outline-none transition text-sm">
+                        <input type="text" id="driveLink" placeholder="Paste link folder di sini..." class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
                     </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Batas Kuota Foto (Opsional)</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-shield-halved text-slate-400"></i>
+                        </div>
+                        <input type="number" id="kuota" placeholder="Contoh: 100 (Kosongkan jika bebas)" class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Batas Waktu Klien Memilih Foto (Opsional)</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-hourglass-half text-slate-400"></i>
+                        </div>
+                        <input type="datetime-local" id="deadline" oninput="updateDeadlineHint()" class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <button type="button" onclick="setDeadlineDays(3)" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-blue-600 hover:text-blue-600 transition">3 hari</button>
+                        <button type="button" onclick="setDeadlineDays(7)" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-blue-600 hover:text-blue-600 transition">7 hari</button>
+                        <button type="button" onclick="setDeadlineDays(14)" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-blue-600 hover:text-blue-600 transition">14 hari</button>
+                        <button type="button" onclick="setDeadlineDays(30)" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-blue-600 hover:text-blue-600 transition">30 hari</button>
+                        <button type="button" onclick="setDeadlineDays(0)" class="px-3 py-1.5 text-[11px] font-bold text-slate-400 hover:text-red-500 transition"><i class="fa-solid fa-xmark"></i> Tanpa batas</button>
+                    </div>
+                    <p id="deadlineHint" class="text-[11px] text-slate-500 mt-2 leading-relaxed">Setelah melewati batas ini, klien tidak bisa memilih lagi dan sisa foto akan dipilihkan oleh vendor. Kosongkan jika tanpa batas.</p>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 space-y-3">
+                <label class="block text-xs font-bold text-blue-800 border-b border-blue-200 pb-2 mb-2"><i class="fa-solid fa-lock mr-1"></i> Proteksi Hak Cipta</label>
+                <div class="flex flex-col gap-3">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="protCheck" checked class="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
+                        <span class="text-sm font-medium text-slate-700">Anti-Save & Blackout (Blokir Tahan Layar & Layar Hitam saat buka Snipping Tool)</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="wmCheck" checked class="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
+                        <span class="text-sm font-medium text-slate-700">Tampilkan Watermark (Nama Vendor) di atas foto</span>
+                    </label>
                 </div>
             </div>
 
             <div>
-                <label class="block text-sm font-bold text-slate-700 mb-2">Link Google Drive Asli</label>
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i class="fa-brands fa-google-drive text-slate-400"></i>
-                    </div>
-                    <input type="text" id="driveLink" placeholder="Paste link folder di sini..."
-                        class="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-blue-600 outline-none transition text-sm">
+                <label class="block text-sm font-bold text-slate-700 mb-1">Format Pesan WhatsApp (Auto-Save)</label>
+                <p class="text-[11px] text-slate-500 mb-2 leading-relaxed">
+                    Gunakan kode <span class="font-mono bg-blue-100 text-blue-700 px-1 rounded">[NAMA]</span> untuk menyisipkan nama, <span class="font-mono bg-blue-100 text-blue-700 px-1 rounded">[LINK]</span> untuk tautan galeri, dan <span class="font-mono bg-blue-100 text-blue-700 px-1 rounded">[BATAS]</span> untuk batas waktu memilih (baris ini otomatis hilang jika tanpa batas). Bebas diedit!
+                </p>
+                <textarea id="waTemplate" oninput="saveTemplate()" rows="8" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl p-3 text-sm text-slate-700 focus:border-blue-600 outline-none transition resize-none shadow-inner"></textarea>
+                <div class="flex justify-end mt-1">
+                    <button onclick="resetTemplate()" class="text-[10px] font-bold text-slate-400 hover:text-blue-600 transition uppercase tracking-wider"><i class="fa-solid fa-rotate-left"></i> Reset ke Standar</button>
                 </div>
             </div>
 
-            <div>
-                <label class="block text-sm font-bold text-slate-700 mb-2">Batas Kuota Foto (Opsional)</label>
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i class="fa-solid fa-shield-halved text-slate-400"></i>
-                    </div>
-                    <input type="number" id="kuota" placeholder="Contoh: 100 (Bisa dikosongkan)"
-                        class="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-blue-600 outline-none transition text-sm">
-                </div>
-            </div>
-
-            <button onclick="generateLink()" class="w-full py-4 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
+            <button onclick="generateLink()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> Buat Link Terenkripsi
             </button>
 
-            <!-- KOTAK HASIL -->
-            <div id="resultBox" class="hidden mt-4 bg-green-50 border border-green-200 rounded-xl p-4 transition-all">
+            <div id="resultBox" class="hidden mt-2 bg-green-50 border border-green-200 rounded-xl p-4 transition-all">
                 <span class="text-xs font-bold text-green-700 uppercase tracking-wider mb-2 block">Link Siap Dikirim!</span>
                 <textarea id="finalUrl" readonly class="w-full bg-white border border-green-200 rounded-lg p-3 text-sm text-slate-700 outline-none resize-none h-24 font-mono font-medium shadow-inner"></textarea>
-                
-                <!-- Dua Tombol Aksi -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                     <button onclick="copyToClipboard()" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold rounded-xl transition flex justify-center items-center gap-2 shadow-md">
                         <i class="fa-solid fa-copy"></i> Salin Teks
@@ -97,21 +128,41 @@
                     </button>
                 </div>
             </div>
-
         </div>
     </div>
 
+    <!-- Alert Notifikasi -->
     <div id="customAlert" class="fixed top-4 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 transition-all duration-300 transform -translate-y-32 opacity-0">
         <i id="alertIcon" class="fa-solid fa-circle-check text-green-400"></i>
         <span id="alertText" class="text-sm font-bold">Teks tersalin!</span>
     </div>
 
     <script>
+        const DEFAULT_TEMPLATE = "Halo [NAMA],\n\nBerikut adalah link galeri foto eksklusif Anda untuk proses seleksi:\n[LINK]\n\nBatas waktu memilih foto: [BATAS]\nJika melewati batas waktu, sisa foto akan kami pilihkan.\n\nSilakan klik link di atas. Jika ada pertanyaan, balas pesan ini ya. Terima kasih!";
+
         document.addEventListener("DOMContentLoaded", () => {
             let currentUrl = window.location.href.split('?')[0].split('#')[0];
             let portalUrl = currentUrl.includes("generatorLink.html") ? currentUrl.replace("generatorLink.html", "") : currentUrl.substring(0, currentUrl.lastIndexOf("/") + 1);
             document.getElementById('baseUrl').value = portalUrl;
+
+            const savedTemplate = localStorage.getItem('customWaTemplate');
+            if (savedTemplate) {
+                document.getElementById('waTemplate').value = savedTemplate;
+            } else {
+                document.getElementById('waTemplate').value = DEFAULT_TEMPLATE;
+            }
         });
+
+        function saveTemplate() {
+            const currentText = document.getElementById('waTemplate').value;
+            localStorage.setItem('customWaTemplate', currentText);
+        }
+
+        function resetTemplate() {
+            document.getElementById('waTemplate').value = DEFAULT_TEMPLATE;
+            localStorage.removeItem('customWaTemplate');
+            showAlert('Format pesan dikembalikan ke standar.');
+        }
 
         function showAlert(message, isError = false) {
             const alertBox = document.getElementById('customAlert');
@@ -126,7 +177,57 @@
             const match = url.match(/folders\/([a-zA-Z0-9-_]+)/);
             if (match && match[1]) return match[1];
             const matchId = url.match(/id=([a-zA-Z0-9-_]+)/);
-            return matchId && matchId[1] ? matchId[1] : null;
+            return matchId && matchId[1] ? matchId[1] : url; 
+        }
+
+        // ===== BATAS WAKTU PILIH FOTO =====
+        function pad2(n) { return String(n).padStart(2, '0'); }
+
+        function toLocalInputValue(d) {
+            return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+        }
+
+        // Pilihan cepat: N hari dari sekarang, jam 23:59 waktu setempat. 0 = tanpa batas
+        function setDeadlineDays(days) {
+            const input = document.getElementById('deadline');
+            if (!days) { input.value = ''; updateDeadlineHint(); return; }
+            const d = new Date();
+            d.setDate(d.getDate() + days);
+            d.setHours(23, 59, 0, 0);
+            input.value = toLocalInputValue(d);
+            updateDeadlineHint();
+        }
+
+        function formatDeadline(ms) {
+            return new Date(ms).toLocaleString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':') + ' ' + tzLabel();
+        }
+
+        function tzLabel() {
+            const off = -new Date().getTimezoneOffset() / 60;
+            const map = { 7: 'WIB', 8: 'WITA', 9: 'WIT' };
+            return map[off] || ('UTC' + (off >= 0 ? '+' : '') + off);
+        }
+
+        function getDeadlineMs() {
+            const v = document.getElementById('deadline').value;
+            if (!v) return null;
+            const ms = new Date(v).getTime();   // nilai input dibaca sebagai waktu lokal vendor -> instan absolut
+            return isNaN(ms) ? null : ms;
+        }
+
+        function updateDeadlineHint() {
+            const hint = document.getElementById('deadlineHint');
+            const ms = getDeadlineMs();
+            if (ms === null) {
+                hint.className = 'text-[11px] text-slate-500 mt-2 leading-relaxed';
+                hint.textContent = 'Setelah melewati batas ini, klien tidak bisa memilih lagi dan sisa foto akan dipilihkan oleh vendor. Kosongkan jika tanpa batas.';
+            } else if (ms <= Date.now()) {
+                hint.className = 'text-[11px] text-red-600 font-semibold mt-2 leading-relaxed';
+                hint.textContent = 'Waktu ini sudah lewat. Link akan langsung terkunci untuk klien.';
+            } else {
+                hint.className = 'text-[11px] text-blue-700 font-semibold mt-2 leading-relaxed';
+                hint.textContent = 'Klien bisa memilih sampai ' + formatDeadline(ms) + '. Setelahnya sisa foto dipilihkan oleh vendor.';
+            }
         }
 
         function generateLink() {
@@ -154,14 +255,22 @@
                 params.push(`k=${hashedKuota}`);
             }
             
+            const deadlineMs = getDeadlineMs();
+            if (deadlineMs !== null) {
+                if (deadlineMs <= Date.now() && !confirm('Batas waktu yang dipilih sudah lewat, klien tidak akan bisa memilih foto sama sekali. Tetap buat link?')) return;
+                const hashedDeadline = btoa(String(Math.floor(deadlineMs / 1000))).replace(/=/g, '');
+                params.push(`d=${hashedDeadline}`);
+            }
+
+            if (document.getElementById('protCheck').checked) params.push('prot=1');
+            if (document.getElementById('wmCheck').checked) params.push('wm=1');
+
             params.push(`i=${folderId}`);
             finalUrl += '?' + params.join('&');
 
-            // Tampilkan kotak hasil
             document.getElementById('resultBox').classList.remove('hidden');
             document.getElementById('finalUrl').value = finalUrl;
 
-            // LOGIKA TOMBOL WHATSAPP
             const btnSendWA = document.getElementById('btnSendWA');
             if (clientPhone !== "") {
                 btnSendWA.innerHTML = '<i class="fa-brands fa-whatsapp text-lg"></i> Kirim ke Klien';
@@ -170,13 +279,30 @@
             }
         }
 
-        // FUNGSI MENYALIN TEKS BIASA
+        function getMessageTemplate(name, link) {
+            let template = document.getElementById('waTemplate').value;
+            let displayName = name ? `Kak ${name}` : "Kakak";
+            const deadlineMs = getDeadlineMs();
+
+            if (deadlineMs === null) {
+                // Tanpa batas: hapus baris yang memuat [BATAS] beserta kalimat lanjutan tentang batas waktu
+                template = template.split('\n').filter(line => !line.includes('[BATAS]') && !/melewati batas waktu/i.test(line)).join('\n').replace(/\n{3,}/g, '\n\n');
+            } else if (!template.includes('[BATAS]')) {
+                // Template kustom lama belum punya [BATAS]: tambahkan di akhir supaya klien tetap tahu
+                template = template.replace(/\s+$/, '') + '\n\nBatas waktu memilih foto: [BATAS]';
+            }
+
+            return template
+                .replace(/\[NAMA\]/g, displayName)
+                .replace(/\[LINK\]/g, link)
+                .replace(/\[BATAS\]/g, deadlineMs !== null ? formatDeadline(deadlineMs) : '');
+        }
+
         function copyToClipboard() {
             const finalUrl = document.getElementById('finalUrl').value;
             const clientName = document.getElementById('clientName').value.trim();
             
-            let greeting = clientName ? `Halo Kak ${clientName}, ` : `Halo Kak, `;
-            let messageToCopy = `${greeting}Berikut adalah galeri foto eksklusif untuk diseleksi:\n\n${finalUrl}\n\nSilakan klik link di atas. Terima kasih!`;
+            let messageToCopy = getMessageTemplate(clientName, finalUrl);
             
             navigator.clipboard.writeText(messageToCopy).then(() => {
                 showAlert('Teks pesan berhasil disalin!');
@@ -191,31 +317,23 @@
             });
         }
 
-        // FUNGSI MEMBUKA WHATSAPP OTOMATIS (DENGAN AUTO-CONVERT NOMOR)
         function sendToClientWA() {
             const finalUrl = document.getElementById('finalUrl').value;
             const clientName = document.getElementById('clientName').value.trim();
             
-            // Ambil nomor WA dan bersihkan dari karakter selain angka
             let rawPhone = document.getElementById('clientPhone').value.replace(/[^0-9]/g, ''); 
             
-            // LOGIKA AUTO-CONVERT NOMOR INDONESIA
             let finalPhone = rawPhone;
-            // Jika nomor dimulai dengan angka '0', ubah menjadi '62'
             if (finalPhone.startsWith('0')) {
                 finalPhone = '62' + finalPhone.substring(1);
             }
 
-            let greeting = clientName ? `Halo Kak ${clientName}, ` : `Halo Kak, `;
-            let message = `${greeting}Berikut adalah galeri foto eksklusif untuk diseleksi:\n\n${finalUrl}\n\nSilakan klik link di atas. Terima kasih!`;
-            
+            let message = getMessageTemplate(clientName, finalUrl);
             let waUrl = '';
             
             if (finalPhone) {
-                // Jika nomor diisi, kirim langsung ke nomor tersebut menggunakan API yang lebih stabil
                 waUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
             } else {
-                // Jika kosong, buka WhatsApp biasa (minta pilih kontak)
                 waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
             }
             
