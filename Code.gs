@@ -26,6 +26,11 @@
 const ADMIN_KEY = 'GANTI-DENGAN-KUNCI-RAHASIA';
 const DEFAULT_ADMIN_KEY = 'GANTI-DENGAN-KUNCI-RAHASIA';   // jangan diubah (penanda nilai bawaan)
 
+// ====== VERSI SERVER ======
+// Naik hanya jika rilis baru membutuhkan perubahan di Code.gs. Website (adminAuth.js,
+// REQUIRED_SERVER_VERSION) membandingkan angka ini dan menampilkan peringatan update.
+const SERVER_VERSION = 1;
+
 // ====== PENGATURAN ======
 const SHEET_LINKS = 'Links';
 const SHEET_PILIHAN = 'Pilihan';
@@ -82,7 +87,7 @@ function handle_(params, body) {
       case 'saveSettings': return json_(actionSaveSettings_(src));
       case 'login':          return json_(actionLogin_(src));
       case 'changePassword': return json_(actionChangePassword_(src));
-      case 'ping':       return json_({ ok: true, now: Date.now(), configured: passwordConfigured_() });
+      case 'ping':       return json_({ ok: true, now: Date.now(), configured: passwordConfigured_(), version: SERVER_VERSION });
       default:           return json_({ ok: false, error: 'unknown_action' });
     }
   } catch (err) {

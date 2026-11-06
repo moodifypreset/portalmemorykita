@@ -9,6 +9,9 @@
 (function () {
     const TOKEN_KEY = 'cpAdminSession';
     const URL_KEY = 'cpServerUrl';
+    // Versi Code.gs minimum yang dibutuhkan website ini. Naikkan angka ini (bersama SERVER_VERSION
+    // di Code.gs) hanya saat rilis baru membutuhkan perubahan di server.
+    const REQUIRED_SERVER_VERSION = 1;
     const LOGIN_PAGE = 'login.html';
     const ALLOWED_NEXT = ['generatorLink.html', 'pengaturanStudio.html'];
     const cfg = () => (typeof CONFIG_APP !== 'undefined' ? CONFIG_APP : {});
@@ -98,6 +101,25 @@
         }
     }
 
+    // Peringatan jika Code.gs di server pembeli lebih lama dari yang dibutuhkan website
+    async function checkServer() {
+        try {
+            const r = await post({ action: 'ping' });
+            const version = Number(r && r.version) || 0;   // server lama (sebelum penanda versi) = 0
+            const outdated = version < REQUIRED_SERVER_VERSION;
+            if (outdated && !document.getElementById('verBanner')) {
+                const d = document.createElement('div');
+                d.id = 'verBanner';
+                d.className = 'w-full max-w-xl bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl p-4 text-xs leading-relaxed shadow-sm';
+                d.innerHTML = '<p class="font-bold mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Server perlu diperbarui</p>' +
+                    'Kode server (Code.gs) Anda versi ' + version + ', sedangkan aplikasi ini butuh versi ' + REQUIRED_SERVER_VERSION + '. ' +
+                    'Beberapa fitur belum berfungsi sampai server diperbarui: buka Apps Script, tempel isi <span class="font-mono">Code.gs</span> terbaru (isi lagi ADMIN_KEY), lalu <b>Deploy &gt; Manage deployments &gt; Edit &gt; New version</b>. Data dan link klien tidak hilang.';
+                document.body.insertBefore(d, document.body.firstChild);
+            }
+            return { version, required: REQUIRED_SERVER_VERSION, outdated };
+        } catch (e) { return { version: null, required: REQUIRED_SERVER_VERSION, outdated: false }; }
+    }
+
     function logout() { clearSession(); location.replace(LOGIN_PAGE); }
 
     // Dipanggil oleh halaman admin. fn jalan jika ada sesi; jika tidak, ke login.html
@@ -109,9 +131,9 @@
             toLogin('');
             return;
         }
-        const start = () => { try { fn(); } catch (e) { console.error(e); } };
+        const start = () => { try { fn(); } catch (e) { console.error(e); } checkServer(); };
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
     }
 
-    window.Admin = { onReady, call, post, doLogin, serverUrl, setServerUrl, urlFromFile, errorText, logout, getSession, nextPage, loginPage: LOGIN_PAGE };
+    window.Admin = { checkServer, onReady, call, post, doLogin, serverUrl, setServerUrl, urlFromFile, errorText, logout, getSession, nextPage, loginPage: LOGIN_PAGE };
 })();
