@@ -16,9 +16,11 @@
 </head>
 <body class="text-slate-800 flex flex-col items-center justify-center min-h-screen p-4 py-10 gap-6">
 
+    <div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
     <!-- BOX UTAMA: GENERATOR LINK -->
-    <div class="bg-white max-w-xl w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-        <div class="bg-slate-900 px-6 py-5 flex items-center justify-between gap-4">
+    <div class="bg-white w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+        <div class="bg-slate-900 px-6 py-5 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4">
                 <div class="bg-white/20 text-white w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-inner">
                     <i class="fa-solid fa-link"></i>
@@ -29,9 +31,9 @@
                 </div>
             </div>
             <div class="shrink-0 flex gap-2">
-                <a id="lnkStudio" href="pengaturanStudio.html" class="text-xs font-bold text-slate-300 hover:text-white transition border border-slate-600 hover:border-slate-400 rounded-lg px-3 py-2"><i class="fa-solid fa-sliders mr-1"></i> Pengaturan</a>
-                <button id="btnTour" onclick="startTour(true)" class="text-xs font-bold text-slate-300 hover:text-white transition border border-slate-600 hover:border-slate-400 rounded-lg px-3 py-2" title="Ulangi tur panduan"><i class="fa-solid fa-circle-question mr-1"></i> Tur</button>
-                <button id="btnLogout" onclick="Admin.logout()" class="text-xs font-bold text-slate-300 hover:text-white transition border border-slate-600 hover:border-slate-400 rounded-lg px-3 py-2"><i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar</button>
+                <a id="lnkStudio" href="pengaturanStudio.html" class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition rounded-lg px-3 py-2 shadow-md border border-white/30"><i class="fa-solid fa-sliders mr-1"></i> Pengaturan</a>
+                <button id="btnTour" onclick="startTour(true)" class="text-xs font-bold text-white bg-amber-500 hover:bg-amber-400 transition rounded-lg px-3 py-2 shadow-md border border-white/30" title="Ulangi tur panduan"><i class="fa-solid fa-circle-question mr-1"></i> Tur</button>
+                <button id="btnLogout" onclick="Admin.logout()" class="text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition rounded-lg px-3 py-2 shadow-md border border-white/30"><i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar</button>
             </div>
         </div>
 
@@ -146,7 +148,7 @@
     </div>
 
     <!-- DAFTAR LINK KLIEN (mode server) -->
-    <div id="listBox" class="hidden bg-white max-w-xl w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+    <div id="listBox" class="hidden bg-white w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden lg:sticky lg:top-6">
         <div class="px-6 py-4 flex items-center justify-between border-b border-slate-200">
             <div>
                 <h2 class="font-bold text-slate-800">Link Klien & Pilihan</h2>
@@ -156,10 +158,12 @@
                 <i class="fa-solid fa-rotate-right"></i> Muat Daftar
             </button>
         </div>
-        <div id="linkList" class="divide-y divide-slate-100 max-h-[28rem] overflow-y-auto">
+        <div id="linkList" class="divide-y divide-slate-100 max-h-[28rem] lg:max-h-[calc(100vh-11rem)] overflow-y-auto">
             <p class="p-6 text-sm text-slate-400 text-center">Klik "Muat Daftar" untuk menampilkan link yang pernah dibuat.</p>
         </div>
     </div>
+
+    </div><!-- /grid 2 kolom -->
 
     <!-- Alert Notifikasi -->
     <div id="customAlert" class="fixed top-4 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 transition-all duration-300 transform -translate-y-32 opacity-0">
@@ -407,10 +411,10 @@
                         <p class="col-span-2"><i class="fa-regular fa-clock mr-1 text-slate-400"></i>Terakhir memilih: ${fmtDate(l.updatedAt)}</p>
                     </div>
                     <div class="flex flex-wrap gap-2 pt-1">
-                        <button onclick="copyClientLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition"><i class="fa-solid fa-copy mr-1"></i>Salin Link</button>
-                        <button onclick="sendToSorter('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition ${l.selectedCount ? '' : 'opacity-50'}" title="Kirim daftar foto pilihan klien langsung ke Auto RAW Sorter"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Pakai di RAW Sorter</button>
-                        <button onclick="extendLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-blue-600 hover:text-blue-600 transition"><i class="fa-solid fa-calendar-plus mr-1"></i>Perpanjang</button>
-                        <button onclick="toggleLinkClosed('${l.code}', ${l.closed ? 'false' : 'true'})" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-red-500 hover:text-red-600 transition"><i class="fa-solid ${l.closed ? 'fa-lock-open' : 'fa-lock'} mr-1"></i>${l.closed ? 'Buka Lagi' : 'Tutup Sekarang'}</button>
+                        <button onclick="copyClientLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm transition"><i class="fa-solid fa-copy mr-1"></i>Salin Link</button>
+                        <button onclick="sendToSorter('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm transition ${l.selectedCount ? '' : 'opacity-50'}" title="Kirim daftar foto pilihan klien langsung ke Auto RAW Sorter"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Pakai di RAW Sorter</button>
+                        <button onclick="extendLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600 shadow-sm transition"><i class="fa-solid fa-calendar-plus mr-1"></i>Perpanjang</button>
+                        <button onclick="toggleLinkClosed('${l.code}', ${l.closed ? 'false' : 'true'})" class="px-3 py-1.5 text-[11px] font-bold ${l.closed ? 'bg-teal-600 hover:bg-teal-700' : 'bg-rose-600 hover:bg-rose-700'} text-white rounded-lg shadow-sm transition"><i class="fa-solid ${l.closed ? 'fa-lock-open' : 'fa-lock'} mr-1"></i>${l.closed ? 'Buka Lagi' : 'Tutup Sekarang'}</button>
                     </div>
                 </div>`;
             }).join('');
