@@ -230,13 +230,13 @@ html[data-page='admin'][data-theme] input[type=checkbox] { accent-color: var(--a
 html[data-theme] .app-head { background: var(--surface) !important; border-bottom: 1px solid var(--border); color: var(--text); }
 html[data-theme] .app-head h1 { color: var(--text) !important; font-family: var(--head); letter-spacing: -.01em; }
 html[data-theme] .app-head p { color: var(--muted) !important; }
-html[data-theme] .app-head .hdr-icon { background: var(--acc) !important; color: var(--acct) !important; box-shadow: none; }
+html[data-theme] .app-head .hdr-icon, html[data-theme] .logo-glyph { background: transparent !important; color: var(--accfg) !important; box-shadow: none !important; border: 0 !important; }
 html[data-theme] .hbtn { display:inline-flex; align-items:center; gap:.25rem; font-size:.75rem; line-height:1rem; font-weight:700; padding:.5rem .75rem; border-radius:.6rem; background: var(--surface) !important; color: var(--text) !important; border:1px solid var(--border) !important; box-shadow: 0 1px 2px rgba(0,0,0,.06); transition: background .15s, border-color .15s; cursor:pointer; text-decoration:none; }
 html[data-theme] .hbtn:hover { background: var(--hover) !important; }
 html[data-theme] .hbtn-pri { background: var(--accsoft) !important; color: var(--accsoftt) !important; border-color: var(--accb) !important; }
 html[data-theme] .hbtn-pri:hover { background: var(--acc) !important; color: var(--acct) !important; }
 html[data-theme] .login-brand { text-align:center; padding: 28px 24px 4px; }
-html[data-theme] .login-brand .hdr-icon { width:52px; height:52px; margin:0 auto 14px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:20px; background: var(--acc); color: var(--acct); }
+html[data-theme] .login-brand .hdr-icon { width:52px; height:52px; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:34px; background: transparent !important; color: var(--accfg) !important; }
 html[data-theme] .login-brand h1 { font-family: var(--head); color: var(--text); font-size:1.4rem; font-weight:800; letter-spacing:-.01em; }
 html[data-theme] .login-brand p { color: var(--muted); font-size:.75rem; margin-top:.25rem; }
 html[data-theme] .tema-card { border:2px solid var(--border); border-radius:14px; padding:10px; cursor:pointer; background: var(--surface); transition: border-color .15s, box-shadow .15s; text-align:left; }
@@ -403,3 +403,17 @@ html[data-page='client'][data-theme] .photo-card.selected img { box-shadow: 0 0 
 html[data-page='client'][data-theme] .check-badge { background-color: var(--acc) !important; color: var(--acct) !important; }
 html[data-page='client'][data-theme] .rounded-2xl, html[data-page='client'][data-theme] .rounded-3xl { border-radius: var(--radius) !important; }
 html[data-page='client'][data-theme] header.sticky { backdrop-filter: saturate(1.4) blur(10px); }
+
+/* logo studio: tanpa kotak/bingkai */
+html[data-theme] #headerLogoBox, html[data-theme] #heroLogoBox, html[data-theme] #welcomeLogoBox { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; }
+html[data-theme] #logoPreviewBox:has(img:not(.hidden)) { border-color: transparent !important; background: transparent !important; }
+
+/* judul section: hitam pada tema bawaan (Clean Pro) */
+html[data-theme='bersih'] { --heading: #0a0f1c; }
+html[data-page='admin'][data-theme='bersih'] h1, html[data-page='admin'][data-theme='bersih'] h2, html[data-page='admin'][data-theme='bersih'] h3,
+html[data-page='admin'][data-theme='bersih'] label.font-bold, html[data-page='admin'][data-theme='bersih'] .text-blue-800.font-bold,
+html[data-page='admin'][data-theme='bersih'] .text-emerald-800, html[data-page='admin'][data-theme='bersih'] .text-slate-700.font-bold,
+html[data-page='admin'][data-theme='bersih'] .tema-card p:first-of-type { color: var(--heading) !important; }
+html[data-page='client'][data-theme='bersih']:not(.dark) h2:not(#heroSection *):not(#welcomeSection *),
+html[data-page='client'][data-theme='bersih']:not(.dark) h3, html[data-page='client'][data-theme='bersih']:not(.dark) #headerVendorName,
+html[data-page='client'][data-theme='bersih']:not(.dark) #welcomeSection h1, html[data-page='client'][data-theme='bersih']:not(.dark) #welcomeSection h2 { color: var(--heading) !important; }
