@@ -1,0 +1,405 @@
+/* theme.css — tema tampilan (dipilih di Pengaturan Studio). Diatur lewat atribut data-theme pada <html>. */
+html[data-theme='bersih'] {
+  --acc: #2563eb;
+  --acch: #1d4ed8;
+  --acct: #ffffff;
+  --accfg: #2563eb;
+  --accsoft: #eff6ff;
+  --accsoftt: #1d4ed8;
+  --accb: #bfdbfe;
+  --accl: #60a5fa;
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --hover: #e2e8f0;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text2: #475569;
+  --muted: #94a3b8;
+  --btn: #0f172a;
+  --btnh: #000000;
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(15,23,42,.06),0 10px 28px rgba(15,23,42,.07);
+  --okb: #ecfdf5;
+  --okt: #047857;
+  --okbd: #a7f3d0;
+  --badb: #fef2f2;
+  --badt: #b91c1c;
+  --badbd: #fecaca;
+  --warnb: #fffbeb;
+  --warnt: #b45309;
+  --head: 'Inter',system-ui,sans-serif;
+  --body: 'Inter',system-ui,sans-serif;
+}
+html[data-theme='gelap'] {
+  --acc: #e0b25c;
+  --acch: #caa04e;
+  --acct: #16120a;
+  --accfg: #e0b25c;
+  --accsoft: #2a2314;
+  --accsoftt: #e0b25c;
+  --accb: #5a4617;
+  --accl: #e0b25c;
+  --bg: #0b0d12;
+  --surface: #14171f;
+  --surface2: #0f1218;
+  --hover: #1d2230;
+  --border: #262c3a;
+  --text: #f1f5f9;
+  --text2: #cbd5e1;
+  --muted: #8b95a7;
+  --btn: #2b3140;
+  --btnh: #3a4256;
+  --radius: 14px;
+  --shadow: 0 1px 0 rgba(255,255,255,.03) inset,0 12px 32px rgba(0,0,0,.5);
+  --okb: #11261b;
+  --okt: #4ade80;
+  --okbd: #1f4d33;
+  --badb: #2a1517;
+  --badt: #f87171;
+  --badbd: #5b2428;
+  --warnb: #2a2110;
+  --warnt: #fbbf24;
+  --head: 'Inter',system-ui,sans-serif;
+  --body: 'Inter',system-ui,sans-serif;
+}
+html[data-theme='elegan'] {
+  --acc: #5f7a61;
+  --acch: #4e684f;
+  --acct: #ffffff;
+  --accfg: #4e684f;
+  --accsoft: #eaf0e8;
+  --accsoftt: #4e684f;
+  --accb: #c5d3c3;
+  --accl: #c3d6c0;
+  --bg: #f7f3ee;
+  --surface: #fffdf9;
+  --surface2: #f3ede4;
+  --hover: #ebe3d8;
+  --border: #e6ddd2;
+  --text: #2b2622;
+  --text2: #5c5148;
+  --muted: #8a7f74;
+  --btn: #3b332c;
+  --btnh: #2b2622;
+  --radius: 20px;
+  --shadow: 0 1px 2px rgba(60,40,20,.05),0 12px 30px rgba(60,40,20,.08);
+  --okb: #eaf0e8;
+  --okt: #4e684f;
+  --okbd: #c5d3c3;
+  --badb: #faece8;
+  --badt: #a2432f;
+  --badbd: #efc9bf;
+  --warnb: #faf3e3;
+  --warnt: #8a6a1f;
+  --head: Georgia,'Playfair Display','Times New Roman',serif;
+  --body: 'Inter',system-ui,sans-serif;
+}
+/* ----- aksen: menimpa warna biru bawaan ----- */
+html[data-theme] .bg-blue-500,
+html[data-theme] .bg-blue-600,
+html[data-theme] .bg-blue-700,
+html[data-theme] .dark\:bg-blue-600,
+html[data-theme] .hover\:bg-blue-600:hover,
+html[data-theme] .hover\:bg-blue-500:hover { background-color: var(--acc) !important; color: var(--acct) !important; }
+html[data-theme] .hover\:bg-blue-700:hover,
+html[data-theme] .dark\:hover\:bg-blue-700:hover,
+html[data-theme] .hover\:bg-blue-800:hover { background-color: var(--acch) !important; color: var(--acct) !important; }
+html[data-theme] .text-blue-500,
+html[data-theme] .text-blue-600,
+html[data-theme] .text-blue-700,
+html[data-theme] .text-blue-800,
+html[data-theme] .dark\:text-blue-300,
+html[data-theme] .dark\:text-blue-400,
+html[data-theme] .dark\:text-blue-500,
+html[data-theme] .hover\:text-blue-600:hover,
+html[data-theme] .hover\:text-blue-700:hover,
+html[data-theme] .group-hover\:text-blue-600 { color: var(--accfg) !important; }
+html[data-theme] .text-blue-200,
+html[data-theme] .text-blue-300,
+html[data-theme] .text-blue-400,
+html[data-theme] .dark\:text-blue-300,
+html[data-theme] .dark\:text-blue-400 { color: var(--accl) !important; }
+html[data-theme] .bg-blue-50,
+html[data-theme] .bg-blue-100,
+html[data-theme] .hover\:bg-blue-50:hover,
+html[data-theme] .hover\:bg-blue-100:hover,
+html[data-theme] .dark\:bg-blue-900\/40,
+html[data-theme] .dark\:bg-blue-900\/50,
+html[data-theme] .dark\:bg-blue-950\/50 { background-color: var(--accsoft) !important; }
+html[data-theme] .border-blue-200,
+html[data-theme] .border-blue-300,
+html[data-theme] .border-blue-400,
+html[data-theme] .border-blue-500,
+html[data-theme] .border-blue-600,
+html[data-theme] .dark\:border-blue-400,
+html[data-theme] .dark\:border-blue-500,
+html[data-theme] .dark\:border-blue-900,
+html[data-theme] .hover\:border-blue-600:hover,
+html[data-theme] .focus\:border-blue-600:focus,
+html[data-theme] .focus\:border-blue-500:focus { border-color: var(--accb) !important; }
+html[data-theme] .border-blue-600,
+html[data-theme] .hover\:border-blue-600:hover,
+html[data-theme] .focus\:border-blue-600:focus,
+html[data-theme] .focus\:border-blue-500:focus { border-color: var(--acc) !important; }
+html[data-theme] .focus\:ring-blue-500:focus, html[data-theme] .focus\:ring-blue-600:focus { --tw-ring-color: var(--acc) !important; }
+html[data-theme] .bg-blue-50,
+html[data-theme] .bg-blue-100 { color: var(--accsoftt) !important; }
+
+/* ----- halaman admin (login, generator, pengaturan, RAW sorter) ----- */
+html[data-page='admin'][data-theme] .bg-white,
+html[data-page='admin'][data-theme] .hover\:bg-white:hover { background-color: var(--surface) !important; }
+html[data-page='admin'][data-theme] .bg-slate-50,
+html[data-page='admin'][data-theme] .bg-slate-100,
+html[data-page='admin'][data-theme] .bg-gray-50 { background-color: var(--surface2) !important; }
+html[data-page='admin'][data-theme] .hover\:bg-slate-100:hover,
+html[data-page='admin'][data-theme] .hover\:bg-slate-200:hover,
+html[data-page='admin'][data-theme] .hover\:bg-slate-50:hover,
+html[data-page='admin'][data-theme] .bg-slate-200 { background-color: var(--hover) !important; }
+html[data-page='admin'][data-theme] .bg-slate-800,
+html[data-page='admin'][data-theme] .bg-slate-900 { background-color: var(--btn) !important; color:#fff !important; }
+html[data-page='admin'][data-theme] .hover\:bg-slate-900:hover,
+html[data-page='admin'][data-theme] .hover\:bg-black:hover,
+html[data-page='admin'][data-theme] .hover\:bg-slate-800:hover,
+html[data-page='admin'][data-theme] .hover\:bg-slate-700:hover { background-color: var(--btnh) !important; color:#fff !important; }
+html[data-page='admin'][data-theme] .text-slate-900,
+html[data-page='admin'][data-theme] .text-slate-800,
+html[data-page='admin'][data-theme] .text-black { color: var(--text) !important; }
+html[data-page='admin'][data-theme] .text-slate-700,
+html[data-page='admin'][data-theme] .text-slate-600 { color: var(--text2) !important; }
+html[data-page='admin'][data-theme] .text-slate-500,
+html[data-page='admin'][data-theme] .text-slate-400,
+html[data-page='admin'][data-theme] .text-slate-300 { color: var(--muted) !important; }
+html[data-page='admin'][data-theme] .border-slate-100,
+html[data-page='admin'][data-theme] .border-slate-200,
+html[data-page='admin'][data-theme] .border-slate-300,
+html[data-page='admin'][data-theme] .border-slate-600,
+html[data-page='admin'][data-theme] .border-slate-700,
+html[data-page='admin'][data-theme] .border-slate-800,
+html[data-page='admin'][data-theme] .divide-slate-100,
+html[data-page='admin'][data-theme] .border-gray-200 { border-color: var(--border) !important; }
+html[data-page='admin'][data-theme] .bg-green-50,
+html[data-page='admin'][data-theme] .bg-emerald-50,
+html[data-page='admin'][data-theme] .bg-green-100,
+html[data-page='admin'][data-theme] .bg-emerald-100,
+html[data-page='admin'][data-theme] .bg-teal-50 { background-color: var(--okb) !important; }
+html[data-page='admin'][data-theme] .text-green-700,
+html[data-page='admin'][data-theme] .text-green-800,
+html[data-page='admin'][data-theme] .text-green-600,
+html[data-page='admin'][data-theme] .text-emerald-700,
+html[data-page='admin'][data-theme] .text-emerald-800,
+html[data-page='admin'][data-theme] .text-emerald-600,
+html[data-page='admin'][data-theme] .text-green-500 { color: var(--okt) !important; }
+html[data-page='admin'][data-theme] .border-green-200,
+html[data-page='admin'][data-theme] .border-green-300,
+html[data-page='admin'][data-theme] .border-emerald-200,
+html[data-page='admin'][data-theme] .border-emerald-300 { border-color: var(--okbd) !important; }
+html[data-page='admin'][data-theme] .bg-red-50,
+html[data-page='admin'][data-theme] .bg-red-100,
+html[data-page='admin'][data-theme] .bg-rose-50,
+html[data-page='admin'][data-theme] .hover\:bg-rose-50:hover,
+html[data-page='admin'][data-theme] .hover\:bg-red-50:hover { background-color: var(--badb) !important; }
+html[data-page='admin'][data-theme] .text-red-500,
+html[data-page='admin'][data-theme] .text-red-600,
+html[data-page='admin'][data-theme] .text-red-700,
+html[data-page='admin'][data-theme] .text-rose-600,
+html[data-page='admin'][data-theme] .text-rose-700,
+html[data-page='admin'][data-theme] .hover\:text-red-500:hover,
+html[data-page='admin'][data-theme] .hover\:text-red-600:hover { color: var(--badt) !important; }
+html[data-page='admin'][data-theme] .border-red-200,
+html[data-page='admin'][data-theme] .border-rose-200,
+html[data-page='admin'][data-theme] .border-rose-300,
+html[data-page='admin'][data-theme] .hover\:border-red-500:hover { border-color: var(--badbd) !important; }
+html[data-page='admin'][data-theme] .bg-amber-50,
+html[data-page='admin'][data-theme] .bg-yellow-50,
+html[data-page='admin'][data-theme] .bg-amber-100 { background-color: var(--warnb) !important; }
+html[data-page='admin'][data-theme] .text-amber-600,
+html[data-page='admin'][data-theme] .text-amber-700,
+html[data-page='admin'][data-theme] .text-amber-800 { color: var(--warnt) !important; }
+html[data-page='admin'][data-theme] body { background: var(--bg) !important; color: var(--text); font-family: var(--body); }
+html[data-page='admin'][data-theme] h1, html[data-page='admin'][data-theme] h2, html[data-page='admin'][data-theme] h3 { font-family: var(--head); }
+html[data-page='admin'][data-theme] input, html[data-page='admin'][data-theme] textarea, html[data-page='admin'][data-theme] select { color: var(--text); }
+html[data-page='admin'][data-theme] input::placeholder, html[data-page='admin'][data-theme] textarea::placeholder { color: var(--muted); }
+html[data-page='admin'][data-theme] .rounded-2xl { border-radius: var(--radius) !important; }
+html[data-page='admin'][data-theme] .shadow-xl, html[data-page='admin'][data-theme] .shadow-lg, html[data-page='admin'][data-theme] .shadow-2xl { box-shadow: var(--shadow) !important; }
+html[data-page='admin'][data-theme] .shadow-md, html[data-page='admin'][data-theme] .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,.08) !important; }
+html[data-page='admin'][data-theme] [class*='divide-slate'] > * { border-color: var(--border) !important; }
+html[data-page='admin'][data-theme] input[type=checkbox] { accent-color: var(--acc); }
+
+/* header terang/gelap mengikuti tema (menggantikan header slate-900 lama) */
+html[data-theme] .app-head { background: var(--surface) !important; border-bottom: 1px solid var(--border); color: var(--text); }
+html[data-theme] .app-head h1 { color: var(--text) !important; font-family: var(--head); letter-spacing: -.01em; }
+html[data-theme] .app-head p { color: var(--muted) !important; }
+html[data-theme] .app-head .hdr-icon { background: var(--acc) !important; color: var(--acct) !important; box-shadow: none; }
+html[data-theme] .hbtn { display:inline-flex; align-items:center; gap:.25rem; font-size:.75rem; line-height:1rem; font-weight:700; padding:.5rem .75rem; border-radius:.6rem; background: var(--surface) !important; color: var(--text) !important; border:1px solid var(--border) !important; box-shadow: 0 1px 2px rgba(0,0,0,.06); transition: background .15s, border-color .15s; cursor:pointer; text-decoration:none; }
+html[data-theme] .hbtn:hover { background: var(--hover) !important; }
+html[data-theme] .hbtn-pri { background: var(--accsoft) !important; color: var(--accsoftt) !important; border-color: var(--accb) !important; }
+html[data-theme] .hbtn-pri:hover { background: var(--acc) !important; color: var(--acct) !important; }
+html[data-theme] .login-brand { text-align:center; padding: 28px 24px 4px; }
+html[data-theme] .login-brand .hdr-icon { width:52px; height:52px; margin:0 auto 14px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:20px; background: var(--acc); color: var(--acct); }
+html[data-theme] .login-brand h1 { font-family: var(--head); color: var(--text); font-size:1.4rem; font-weight:800; letter-spacing:-.01em; }
+html[data-theme] .login-brand p { color: var(--muted); font-size:.75rem; margin-top:.25rem; }
+html[data-theme] .tema-card { border:2px solid var(--border); border-radius:14px; padding:10px; cursor:pointer; background: var(--surface); transition: border-color .15s, box-shadow .15s; text-align:left; }
+html[data-theme] .tema-card:hover { border-color: var(--accb); }
+html[data-theme] .tema-card.active { border-color: var(--acc); box-shadow: 0 0 0 3px var(--accsoft); }
+
+/* ----- halaman klien ----- */
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-white,
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:bg-white:hover { background-color: var(--surface) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-slate-50,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-slate-100,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-gray-50 { background-color: var(--surface2) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:bg-slate-100:hover,
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:bg-slate-200:hover,
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:bg-slate-50:hover,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-slate-200 { background-color: var(--hover) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-slate-800,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-slate-900 { background-color: var(--btn) !important; color:#fff !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:bg-slate-900:hover,
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:bg-black:hover,
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:bg-slate-800:hover,
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:bg-slate-700:hover { background-color: var(--btnh) !important; color:#fff !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-slate-900,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-slate-800,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-black { color: var(--text) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-slate-700,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-slate-600 { color: var(--text2) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-slate-500,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-slate-400,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-slate-300 { color: var(--muted) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-slate-100,
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-slate-200,
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-slate-300,
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-slate-600,
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-slate-700,
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-slate-800,
+html[data-page='client'][data-theme='elegan']:not(.dark) .divide-slate-100,
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-gray-200 { border-color: var(--border) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-green-50,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-emerald-50,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-green-100,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-emerald-100,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-teal-50 { background-color: var(--okb) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-green-700,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-green-800,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-green-600,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-emerald-700,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-emerald-800,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-emerald-600,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-green-500 { color: var(--okt) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-green-200,
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-green-300,
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-emerald-200,
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-emerald-300 { border-color: var(--okbd) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-red-50,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-red-100,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-rose-50,
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:bg-rose-50:hover,
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:bg-red-50:hover { background-color: var(--badb) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-red-500,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-red-600,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-red-700,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-rose-600,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-rose-700,
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:text-red-500:hover,
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:text-red-600:hover { color: var(--badt) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-red-200,
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-rose-200,
+html[data-page='client'][data-theme='elegan']:not(.dark) .border-rose-300,
+html[data-page='client'][data-theme='elegan']:not(.dark) .hover\:border-red-500:hover { border-color: var(--badbd) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-amber-50,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-yellow-50,
+html[data-page='client'][data-theme='elegan']:not(.dark) .bg-amber-100 { background-color: var(--warnb) !important; }
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-amber-600,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-amber-700,
+html[data-page='client'][data-theme='elegan']:not(.dark) .text-amber-800 { color: var(--warnt) !important; }
+html[data-page='client'][data-theme='elegan'] body { background: var(--bg) !important; }
+html[data-page='client'][data-theme='elegan'] h1, html[data-page='client'][data-theme='elegan'] h2, html[data-page='client'][data-theme='elegan'] h3 { font-family: var(--head); }
+html[data-page='client'][data-theme='gelap'] body { background: var(--bg) !important; }
+html[data-page='client'][data-theme='gelap'] .bg-white,
+html[data-page='client'][data-theme='gelap'] .hover\:bg-white:hover { background-color: var(--surface) !important; }
+html[data-page='client'][data-theme='gelap'] .bg-slate-50,
+html[data-page='client'][data-theme='gelap'] .bg-slate-100,
+html[data-page='client'][data-theme='gelap'] .bg-gray-50 { background-color: var(--surface2) !important; }
+html[data-page='client'][data-theme='gelap'] .hover\:bg-slate-100:hover,
+html[data-page='client'][data-theme='gelap'] .hover\:bg-slate-200:hover,
+html[data-page='client'][data-theme='gelap'] .hover\:bg-slate-50:hover,
+html[data-page='client'][data-theme='gelap'] .bg-slate-200 { background-color: var(--hover) !important; }
+html[data-page='client'][data-theme='gelap'] .bg-slate-800,
+html[data-page='client'][data-theme='gelap'] .bg-slate-900 { background-color: var(--btn) !important; color:#fff !important; }
+html[data-page='client'][data-theme='gelap'] .hover\:bg-slate-900:hover,
+html[data-page='client'][data-theme='gelap'] .hover\:bg-black:hover,
+html[data-page='client'][data-theme='gelap'] .hover\:bg-slate-800:hover,
+html[data-page='client'][data-theme='gelap'] .hover\:bg-slate-700:hover { background-color: var(--btnh) !important; color:#fff !important; }
+html[data-page='client'][data-theme='gelap'] .text-slate-900,
+html[data-page='client'][data-theme='gelap'] .text-slate-800,
+html[data-page='client'][data-theme='gelap'] .text-black { color: var(--text) !important; }
+html[data-page='client'][data-theme='gelap'] .text-slate-700,
+html[data-page='client'][data-theme='gelap'] .text-slate-600 { color: var(--text2) !important; }
+html[data-page='client'][data-theme='gelap'] .text-slate-500,
+html[data-page='client'][data-theme='gelap'] .text-slate-400,
+html[data-page='client'][data-theme='gelap'] .text-slate-300 { color: var(--muted) !important; }
+html[data-page='client'][data-theme='gelap'] .border-slate-100,
+html[data-page='client'][data-theme='gelap'] .border-slate-200,
+html[data-page='client'][data-theme='gelap'] .border-slate-300,
+html[data-page='client'][data-theme='gelap'] .border-slate-600,
+html[data-page='client'][data-theme='gelap'] .border-slate-700,
+html[data-page='client'][data-theme='gelap'] .border-slate-800,
+html[data-page='client'][data-theme='gelap'] .divide-slate-100,
+html[data-page='client'][data-theme='gelap'] .border-gray-200 { border-color: var(--border) !important; }
+html[data-page='client'][data-theme='gelap'] .bg-green-50,
+html[data-page='client'][data-theme='gelap'] .bg-emerald-50,
+html[data-page='client'][data-theme='gelap'] .bg-green-100,
+html[data-page='client'][data-theme='gelap'] .bg-emerald-100,
+html[data-page='client'][data-theme='gelap'] .bg-teal-50 { background-color: var(--okb) !important; }
+html[data-page='client'][data-theme='gelap'] .text-green-700,
+html[data-page='client'][data-theme='gelap'] .text-green-800,
+html[data-page='client'][data-theme='gelap'] .text-green-600,
+html[data-page='client'][data-theme='gelap'] .text-emerald-700,
+html[data-page='client'][data-theme='gelap'] .text-emerald-800,
+html[data-page='client'][data-theme='gelap'] .text-emerald-600,
+html[data-page='client'][data-theme='gelap'] .text-green-500 { color: var(--okt) !important; }
+html[data-page='client'][data-theme='gelap'] .border-green-200,
+html[data-page='client'][data-theme='gelap'] .border-green-300,
+html[data-page='client'][data-theme='gelap'] .border-emerald-200,
+html[data-page='client'][data-theme='gelap'] .border-emerald-300 { border-color: var(--okbd) !important; }
+html[data-page='client'][data-theme='gelap'] .bg-red-50,
+html[data-page='client'][data-theme='gelap'] .bg-red-100,
+html[data-page='client'][data-theme='gelap'] .bg-rose-50,
+html[data-page='client'][data-theme='gelap'] .hover\:bg-rose-50:hover,
+html[data-page='client'][data-theme='gelap'] .hover\:bg-red-50:hover { background-color: var(--badb) !important; }
+html[data-page='client'][data-theme='gelap'] .text-red-500,
+html[data-page='client'][data-theme='gelap'] .text-red-600,
+html[data-page='client'][data-theme='gelap'] .text-red-700,
+html[data-page='client'][data-theme='gelap'] .text-rose-600,
+html[data-page='client'][data-theme='gelap'] .text-rose-700,
+html[data-page='client'][data-theme='gelap'] .hover\:text-red-500:hover,
+html[data-page='client'][data-theme='gelap'] .hover\:text-red-600:hover { color: var(--badt) !important; }
+html[data-page='client'][data-theme='gelap'] .border-red-200,
+html[data-page='client'][data-theme='gelap'] .border-rose-200,
+html[data-page='client'][data-theme='gelap'] .border-rose-300,
+html[data-page='client'][data-theme='gelap'] .hover\:border-red-500:hover { border-color: var(--badbd) !important; }
+html[data-page='client'][data-theme='gelap'] .bg-amber-50,
+html[data-page='client'][data-theme='gelap'] .bg-yellow-50,
+html[data-page='client'][data-theme='gelap'] .bg-amber-100 { background-color: var(--warnb) !important; }
+html[data-page='client'][data-theme='gelap'] .text-amber-600,
+html[data-page='client'][data-theme='gelap'] .text-amber-700,
+html[data-page='client'][data-theme='gelap'] .text-amber-800 { color: var(--warnt) !important; }
+html[data-page='client'][data-theme='gelap'] .dark\:bg-slate-900,
+html[data-page='client'][data-theme='gelap'] .dark\:bg-slate-950 { background-color: var(--bg) !important; }
+html[data-page='client'][data-theme='gelap'] .dark\:bg-slate-800,
+html[data-page='client'][data-theme='gelap'] .dark\:bg-slate-800\/95,
+html[data-page='client'][data-theme='gelap'] .dark\:bg-slate-900\/90 { background-color: var(--surface) !important; }
+html[data-page='client'][data-theme='gelap'] .dark\:bg-slate-700,
+html[data-page='client'][data-theme='gelap'] .dark\:hover\:bg-slate-600:hover { background-color: var(--surface2) !important; }
+html[data-page='client'][data-theme='gelap'] .dark\:border-slate-700,
+html[data-page='client'][data-theme='gelap'] .dark\:border-slate-800,
+html[data-page='client'][data-theme='gelap'] .dark\:border-slate-600,
+html[data-page='client'][data-theme='gelap'] .dark\:border-slate-500 { border-color: var(--border) !important; }
+
+/* tombol mode gelap tidak relevan jika tema sudah menentukan terang/gelap */
+html[data-theme='gelap'] #darkModeBtn, html[data-theme='elegan'] #darkModeBtn { display: none !important; }
+html[data-page='client'][data-theme] .photo-card.selected img { box-shadow: 0 0 0 3px var(--acc) !important; }
+html[data-page='client'][data-theme] .check-badge { background-color: var(--acc) !important; color: var(--acct) !important; }
+html[data-page='client'][data-theme] .rounded-2xl, html[data-page='client'][data-theme] .rounded-3xl { border-radius: var(--radius) !important; }
+html[data-page='client'][data-theme] header.sticky { backdrop-filter: saturate(1.4) blur(10px); }

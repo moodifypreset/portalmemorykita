@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Auto RAW Sorter</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="cp-page" content="admin">
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -22,10 +25,10 @@
 <body class="text-slate-800 flex flex-col min-h-screen">
 
     <!-- Header -->
-    <header class="bg-slate-900 shadow-lg sticky top-0 z-40">
+    <header class="app-head sticky top-0 z-40">
         <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <div class="bg-white/20 text-white w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-inner">
+                <div class="hdr-icon w-10 h-10 rounded-xl flex items-center justify-center text-xl">
                     <i class="fa-solid fa-bolt"></i>
                 </div>
                 <div>
@@ -34,7 +37,7 @@
                 </div>
             </div>
             
-            <a href="generatorLink.html" target="_blank" class="px-4 py-2 md:px-5 md:py-2.5 bg-white text-blue-600 hover:bg-blue-50 font-bold rounded-lg text-xs md:text-sm transition flex items-center gap-2 shadow-md">
+            <a href="generatorLink.html" target="_blank" class="hbtn hbtn-pri !text-xs md:!text-sm md:!px-5 md:!py-2.5 gap-2">
                 <i class="fa-solid fa-link"></i> <span class="hidden md:inline">Generate Link Client</span><span class="md:hidden">Generator</span>
             </a>
         </div>

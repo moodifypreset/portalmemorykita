@@ -11,7 +11,7 @@
     const URL_KEY = 'cpServerUrl';
     // Versi Code.gs minimum yang dibutuhkan website ini. Naikkan angka ini (bersama SERVER_VERSION
     // di Code.gs) hanya saat rilis baru membutuhkan perubahan di server.
-    const REQUIRED_SERVER_VERSION = 2;
+    const REQUIRED_SERVER_VERSION = 3;
     const LOGIN_PAGE = 'login.html';
     const ALLOWED_NEXT = ['generatorLink.html', 'pengaturanStudio.html'];
     const cfg = () => (typeof CONFIG_APP !== 'undefined' ? CONFIG_APP : {});

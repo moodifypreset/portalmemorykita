@@ -6,6 +6,9 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Masuk Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="cp-page" content="admin">
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -17,12 +20,10 @@
 <body class="text-slate-800 flex items-center justify-center min-h-screen p-4">
 
     <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-        <div class="bg-slate-900 px-6 py-5 flex items-center gap-3">
-            <div class="bg-white/20 text-white w-10 h-10 rounded-xl flex items-center justify-center"><i class="fa-solid fa-lock"></i></div>
-            <div>
-                <h1 class="font-bold text-white">Masuk Admin</h1>
-                <p class="text-slate-400 text-[11px] uppercase tracking-wider">Khusus pemilik studio</p>
-            </div>
+        <div class="login-brand">
+            <div class="hdr-icon"><i class="fa-solid fa-lock"></i></div>
+            <h1>Masuk Admin</h1>
+            <p>Khusus pemilik studio · kelola link galeri dan pilihan klien</p>
         </div>
 
         <form id="gateForm" class="p-6 space-y-4" autocomplete="off">

@@ -29,7 +29,7 @@ const DEFAULT_ADMIN_KEY = 'GANTI-DENGAN-KUNCI-RAHASIA';   // jangan diubah (pena
 // ====== VERSI SERVER ======
 // Naik hanya jika rilis baru membutuhkan perubahan di Code.gs. Website (adminAuth.js,
 // REQUIRED_SERVER_VERSION) membandingkan angka ini dan menampilkan peringatan update.
-const SERVER_VERSION = 2;
+const SERVER_VERSION = 3;
 
 // ====== PENGATURAN ======
 const SHEET_LINKS = 'Links';
@@ -46,7 +46,7 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const LINK_HEADERS = ['Kode', 'Nama Klien', 'Folder ID', 'Kuota', 'Batas Waktu', 'Status', 'Proteksi', 'Watermark', 'Dibuat', 'No. WA'];
 const SEL_HEADERS = ['Kode', 'Nama Klien', 'Jumlah', 'Daftar Foto', 'Data (JSON)', 'Diperbarui'];
 // Pengaturan studio: kunci -> nilai awal (nama, nomor WA admin, template pesan WA)
-const SETTING_KEYS = ['namaVendor', 'whatsappAdmin', 'waTemplate', 'googleApiKey', 'logoVersion', 'logoWmWhite'];
+const SETTING_KEYS = ['namaVendor', 'whatsappAdmin', 'waTemplate', 'googleApiKey', 'logoVersion', 'logoWmWhite', 'tema'];
 // Logo vendor disimpan sebagai data URI, dipecah ke beberapa baris (batas 1 sel Sheet = 50.000 karakter)
 const LOGO_KEYS = ['logo0', 'logo1', 'logo2'];
 const LOGO_CHUNK = 45000;
@@ -580,7 +580,7 @@ function readSettings_() {
 // Yang boleh dilihat klien (template pesan WA hanya untuk vendor)
 function publicSettings_() {
   const st = readSettings_();
-  return { namaVendor: st.namaVendor, whatsappAdmin: st.whatsappAdmin, googleApiKey: st.googleApiKey, logoVersion: st.logoVersion, logoWmWhite: st.logoWmWhite };
+  return { namaVendor: st.namaVendor, whatsappAdmin: st.whatsappAdmin, googleApiKey: st.googleApiKey, logoVersion: st.logoVersion, logoWmWhite: st.logoWmWhite, tema: st.tema };
 }
 
 function normalizePhone_(v) {
@@ -628,6 +628,11 @@ function actionSaveSettings_(src) {
     clean.googleApiKey = key;
   }
 
+  if (Object.prototype.hasOwnProperty.call(incoming, 'tema')) {
+    const tema = String(incoming.tema || '').trim();
+    if (tema && ['bersih', 'gelap', 'elegan'].indexOf(tema) === -1) return { ok: false, error: 'bad_theme' };
+    clean.tema = tema;
+  }
   if (Object.prototype.hasOwnProperty.call(incoming, 'logoWmWhite')) clean.logoWmWhite = truthy_(incoming.logoWmWhite) ? '1' : '';
   if (Object.prototype.hasOwnProperty.call(incoming, 'logo')) {
     const logo = String(incoming.logo || '').trim();

@@ -44,15 +44,15 @@
     root.innerHTML =
       '<div id="tourShield" style="position:absolute;inset:0;"></div>' +
       '<div id="tourSpot" style="position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(15,23,42,.78);transition:all .25s ease;pointer-events:none;"></div>' +
-      '<div id="tourCard" role="dialog" aria-live="polite" style="position:absolute;max-width:340px;width:calc(100vw - 24px);background:#fff;color:#0f172a;border-radius:18px;padding:18px 18px 14px;box-shadow:0 20px 50px rgba(0,0,0,.45);font-family:inherit;">' +
-        '<p id="tourStep" style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:.06em;margin:0 0 6px"></p>' +
+      '<div id="tourCard" role="dialog" aria-live="polite" style="position:absolute;max-width:340px;width:calc(100vw - 24px);background:var(--surface,#fff);color:var(--text,#0f172a);border:1px solid var(--border,transparent);border-radius:18px;padding:18px 18px 14px;box-shadow:0 20px 50px rgba(0,0,0,.45);font-family:inherit;">' +
+        '<p id="tourStep" style="font-size:11px;font-weight:700;color:var(--accfg,#2563eb);text-transform:uppercase;letter-spacing:.06em;margin:0 0 6px"></p>' +
         '<h3 id="tourTitle" style="font-size:16px;font-weight:800;margin:0 0 6px;line-height:1.3"></h3>' +
-        '<div id="tourText" style="font-size:13px;line-height:1.55;color:#475569;margin:0 0 14px"></div>' +
+        '<div id="tourText" style="font-size:13px;line-height:1.55;color:var(--text2,#475569);margin:0 0 14px"></div>' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">' +
-          '<button id="tourSkip" type="button" style="font-size:12px;font-weight:700;color:#64748b;background:none;border:0;padding:8px 4px;cursor:pointer"></button>' +
+          '<button id="tourSkip" type="button" style="font-size:12px;font-weight:700;color:var(--muted,#64748b);background:none;border:0;padding:8px 4px;cursor:pointer"></button>' +
           '<div style="display:flex;gap:8px">' +
-            '<button id="tourPrev" type="button" style="font-size:12px;font-weight:700;color:#334155;background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:8px 12px;cursor:pointer"></button>' +
-            '<button id="tourNext" type="button" style="font-size:12px;font-weight:700;color:#fff;background:#2563eb;border:0;border-radius:10px;padding:8px 16px;cursor:pointer"></button>' +
+            '<button id="tourPrev" type="button" style="font-size:12px;font-weight:700;color:var(--text,#334155);background:var(--surface,#fff);border:1px solid var(--border,#cbd5e1);border-radius:10px;padding:8px 12px;cursor:pointer"></button>' +
+            '<button id="tourNext" type="button" style="font-size:12px;font-weight:700;color:var(--acct,#fff);background:var(--acc,#2563eb);border:0;border-radius:10px;padding:8px 16px;cursor:pointer"></button>' +
           '</div>' +
         '</div>' +
       '</div>';

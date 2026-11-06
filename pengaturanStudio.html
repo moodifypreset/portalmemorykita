@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Pengaturan Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="cp-page" content="admin">
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -17,9 +20,9 @@
 <body class="text-slate-800 flex flex-col items-center min-h-screen p-4 py-10 gap-6">
 
     <div class="bg-white max-w-xl w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-        <div class="bg-slate-900 px-6 py-5 flex flex-wrap items-center justify-between gap-4">
+        <div class="app-head px-6 py-5 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-                <div class="bg-white/20 text-white w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-inner">
+                <div class="hdr-icon w-10 h-10 rounded-xl flex items-center justify-center text-lg">
                     <i class="fa-solid fa-sliders"></i>
                 </div>
                 <div>
@@ -28,9 +31,9 @@
                 </div>
             </div>
             <div class="shrink-0 flex gap-2">
-                <a href="generatorLink.html" class="text-xs font-bold text-slate-900 bg-white hover:bg-slate-200 transition rounded-lg px-3 py-2 shadow-md border border-white"><i class="fa-solid fa-link mr-1"></i> Buat Link</a>
-                <button id="btnTour" onclick="startTour(true)" class="text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition rounded-lg px-3 py-2 border border-white/50" title="Ulangi tur panduan"><i class="fa-solid fa-circle-question mr-1"></i> Tur</button>
-                <button id="btnLogout" onclick="Admin.logout()" class="text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition rounded-lg px-3 py-2 border border-white/50"><i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar</button>
+                <a href="generatorLink.html" class="hbtn hbtn-pri"><i class="fa-solid fa-link mr-1"></i> Buat Link</a>
+                <button id="btnTour" onclick="startTour(true)" class="hbtn" title="Ulangi tur panduan"><i class="fa-solid fa-circle-question mr-1"></i> Tur</button>
+                <button id="btnLogout" onclick="Admin.logout()" class="hbtn"><i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar</button>
             </div>
         </div>
 
@@ -53,6 +56,38 @@
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Studio</label>
                 <input type="text" id="setNamaVendor" placeholder="Cth: Memory Kita Photo" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
                 <p class="text-[11px] text-slate-500 mt-1">Tampil di header, watermark, dan pesan ke klien.</p>
+            </div>
+
+<!-- Tema tampilan -->
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5"><i class="fa-solid fa-palette mr-1 text-slate-400"></i> Tema Tampilan</label>
+                <div id="themePicker" class="grid grid-cols-3 gap-2.5">
+                    <button type="button" class="tema-card" data-tema="bersih" onclick="pickTheme('bersih')">
+                        <div style="height:64px;border-radius:10px;background:#f4f6fb;border:1px solid #e2e8f0;padding:8px;display:flex;flex-direction:column;gap:5px">
+                            <div style="height:9px;width:55%;border-radius:4px;background:#0f172a;opacity:.85"></div>
+                            <div style="display:flex;gap:5px;flex:1"><div style="flex:1;border-radius:6px;background:#ffffff;border:1px solid #e2e8f0"></div><div style="width:28%;border-radius:6px;background:#2563eb"></div></div>
+                        </div>
+                        <p class="text-xs font-bold mt-2" style="color:var(--text)">Clean Pro</p>
+                        <p class="text-[10px] leading-snug" style="color:var(--muted)">Terang, bersih, biru. Bawaan.</p>
+                    </button>
+                    <button type="button" class="tema-card" data-tema="gelap" onclick="pickTheme('gelap')">
+                        <div style="height:64px;border-radius:10px;background:#0b0d12;border:1px solid #262c3a;padding:8px;display:flex;flex-direction:column;gap:5px">
+                            <div style="height:9px;width:55%;border-radius:4px;background:#f1f5f9;opacity:.85"></div>
+                            <div style="display:flex;gap:5px;flex:1"><div style="flex:1;border-radius:6px;background:#14171f;border:1px solid #262c3a"></div><div style="width:28%;border-radius:6px;background:#e0b25c"></div></div>
+                        </div>
+                        <p class="text-xs font-bold mt-2" style="color:var(--text)">Dark Studio</p>
+                        <p class="text-[10px] leading-snug" style="color:var(--muted)">Gelap premium, aksen emas.</p>
+                    </button>
+                    <button type="button" class="tema-card" data-tema="elegan" onclick="pickTheme('elegan')">
+                        <div style="height:64px;border-radius:10px;background:#f7f3ee;border:1px solid #e6ddd2;padding:8px;display:flex;flex-direction:column;gap:5px">
+                            <div style="height:9px;width:55%;border-radius:4px;background:#2b2622;opacity:.85"></div>
+                            <div style="display:flex;gap:5px;flex:1"><div style="flex:1;border-radius:6px;background:#fffdf9;border:1px solid #e6ddd2"></div><div style="width:28%;border-radius:6px;background:#5f7a61"></div></div>
+                        </div>
+                        <p class="text-xs font-bold mt-2" style="color:var(--text)">Soft Elegant</p>
+                        <p class="text-[10px] leading-snug" style="color:var(--muted)">Ivory hangat, huruf serif.</p>
+                    </button>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-1.5">Berlaku untuk halaman login, admin, dan halaman klien. Pratinjau langsung di halaman ini; tekan <b>Simpan ke Server</b> untuk menerapkannya ke semua.</p>
             </div>
 
             <!-- Logo -->
@@ -306,6 +341,7 @@
                 if (st.whatsappAdmin) document.getElementById('setWaAdmin').value = st.whatsappAdmin;
                 document.getElementById('setApiKey').value = st.googleApiKey || '';
                 document.getElementById('logoWmWhite').checked = st.logoWmWhite === '1';
+                renderThemePicker(st.tema || '', true);
                 if (st.logoVersion) {
                     try { const lg = await Admin.post({ action: 'logo' }); logoState = { data: (lg && lg.logo) || '', changed: false }; } catch (e) {}
                 } else { logoState = { data: '', changed: false }; }
@@ -320,6 +356,15 @@
             }
         }
 
+        // ----- Tema tampilan -----
+        let selectedTheme = (window.Theme && Theme.get()) || 'bersih';
+        function renderThemePicker(name, persist) {
+            selectedTheme = (window.Theme && Theme.apply(name || 'bersih', !!persist)) || 'bersih';
+            document.querySelectorAll('#themePicker .tema-card').forEach(c => c.classList.toggle('active', c.dataset.tema === selectedTheme));
+        }
+        function pickTheme(name) { renderThemePicker(name, false); }
+        document.addEventListener('DOMContentLoaded', () => renderThemePicker(selectedTheme, false));
+
         async function saveSettings() {
             const nama = document.getElementById('setNamaVendor').value.trim();
             const wa = document.getElementById('setWaAdmin').value.trim();
@@ -333,13 +378,14 @@
             const btn = document.getElementById('btnSave');
             btn.disabled = true; btn.classList.add('opacity-60');
             try {
-                const res = await Admin.call({ action: 'saveSettings', settings: Object.assign({ namaVendor: nama, whatsappAdmin: wa, googleApiKey: key, waTemplate: tpl, logoWmWhite: document.getElementById('logoWmWhite').checked }, logoState.changed ? { logo: logoState.data } : {}) });
+                const res = await Admin.call({ action: 'saveSettings', settings: Object.assign({ namaVendor: nama, whatsappAdmin: wa, googleApiKey: key, waTemplate: tpl, tema: selectedTheme, logoWmWhite: document.getElementById('logoWmWhite').checked }, logoState.changed ? { logo: logoState.data } : {}) });
                 if (!res.ok) { if (res.error !== 'unauthorized') showAlert(serverErrorText(res.error, res), true); return; }
                 document.getElementById('setWaAdmin').value = res.settings.whatsappAdmin;   // sudah dinormalkan (62...)
                 logoState.changed = false;
                 document.getElementById('logoInfo').textContent = 'Logo tersimpan.';
                 const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
                 document.getElementById('saveStatus').textContent = 'Tersimpan ' + time + '. Berlaku untuk semua link.';
+                try { Theme.apply(selectedTheme, true); } catch (e) {}
                 showAlert('Pengaturan disimpan. Berlaku untuk semua link.');
             } catch (e) {
                 showAlert('Server tidak dapat dihubungi.', true);
@@ -382,6 +428,7 @@
                     { title: 'Atur sekali, berlaku untuk semua klien', text: 'Halaman ini berisi identitas studio Anda. Semua tersimpan di Google Sheet, jadi cukup diisi <b>satu kali</b>. Mari kita lewati satu per satu.' },
                     { el: '#serverUrlView', title: 'Koneksi server', text: 'Ini alamat server Google Sheet Anda. Tekan <b>Tes Koneksi</b> untuk memastikan terhubung dan versinya sudah terbaru.' },
                     { el: '#setNamaVendor', title: 'Nama studio', text: 'Nama ini tampil di halaman klien, pesan WhatsApp, dan daftar foto pilihan.' },
+                    { el: '#themePicker', title: 'Tema tampilan', text: 'Pilih gaya tampilan: <b>Clean Pro</b> (bawaan, biru), <b>Dark Studio</b>, atau <b>Soft Elegant</b>. Berlaku untuk login, halaman admin, dan halaman klien.' },
                     { el: '#logoPreviewBox', title: 'Logo studio (opsional)', text: 'Unggah logo Anda. Logo tampil di header dan halaman sambutan klien, serta menjadi <b>watermark</b> di atas foto. PNG transparan hasilnya paling bagus.' },
                     { el: '#setWaAdmin', title: 'Nomor WhatsApp admin', text: 'Setelah klien selesai memilih, tombol <b>Kirim ke WhatsApp</b> akan mengirim daftar foto ke nomor ini. Format bebas, mis. 08123456789.' },
                     { el: '#setApiKey', title: 'Google Drive API Key', text: 'Dipakai agar foto di folder Drive bisa ditampilkan ke klien. Cukup tempel sekali di sini, tidak perlu mengedit file apa pun.' },
