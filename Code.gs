@@ -26,12 +26,15 @@ const ADMIN_KEY = 'GANTI-DENGAN-KUNCI-RAHASIA';
 // ====== PENGATURAN ======
 const SHEET_LINKS = 'Links';
 const SHEET_PILIHAN = 'Pilihan';
+const SHEET_SETTINGS = 'Pengaturan';
 const GRACE_MS = 30 * 1000;        // toleransi 30 detik setelah batas (menutup jeda simpan otomatis)
 const MAX_ITEMS = 700;             // maksimal foto terpilih per klien
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 const LINK_HEADERS = ['Kode', 'Nama Klien', 'Folder ID', 'Kuota', 'Batas Waktu', 'Status', 'Proteksi', 'Watermark', 'Dibuat', 'No. WA'];
 const SEL_HEADERS = ['Kode', 'Nama Klien', 'Jumlah', 'Daftar Foto', 'Data (JSON)', 'Diperbarui'];
+// Pengaturan studio: kunci -> nilai awal (nama, nomor WA admin, template pesan WA)
+const SETTING_KEYS = ['namaVendor', 'whatsappAdmin', 'waTemplate'];
 // Kolom Links (1-based)
 const L = { CODE: 1, NAME: 2, FOLDER: 3, KUOTA: 4, DEADLINE: 5, STATUS: 6, PROT: 7, WM: 8, CREATED: 9, PHONE: 10 };
 
@@ -62,6 +65,9 @@ function handle_(params, body) {
       case 'createLink': return json_(actionCreateLink_(src));
       case 'updateLink': return json_(actionUpdateLink_(src));
       case 'list':       return json_(actionList_(src));
+      case 'settings':     return json_(actionSettings_(src));
+      case 'getSettings':  return json_(actionGetSettings_(src));
+      case 'saveSettings': return json_(actionSaveSettings_(src));
       case 'ping':       return json_({ ok: true, now: Date.now() });
       default:           return json_({ ok: false, error: 'unknown_action' });
     }
@@ -95,7 +101,14 @@ function ensureSheets_() {
     sel.getRange(1, 1, 1, SEL_HEADERS.length).setValues([SEL_HEADERS]);
     sel.setFrozenRows(1);
   }
-  return { links: links, sel: sel };
+  let set = ss.getSheetByName(SHEET_SETTINGS);
+  if (!set) {
+    set = ss.insertSheet(SHEET_SETTINGS);
+    set.getRange(1, 1, 1, 2).setValues([['Kunci', 'Nilai']]);
+    set.getRange(2, 1, SETTING_KEYS.length, 2).setValues(SETTING_KEYS.map(function (k) { return [k, '']; }));
+    set.setFrozenRows(1);
+  }
+  return { links: links, sel: sel, set: set };
 }
 
 // ---------------------------------------------------------------------
@@ -199,7 +212,8 @@ function actionGet_(src) {
     ok: true,
     now: Date.now(),
     link: link,
-    selection: readSelection_(code)
+    selection: readSelection_(code),
+    settings: publicSettings_()
   };
 }
 
@@ -333,4 +347,71 @@ function actionList_(src) {
     return o;
   }).reverse();
   return { ok: true, now: Date.now(), links: links.slice(0, 200) };
+}
+
+// ---------------------------------------------------------------------
+// Pengaturan studio (nama, nomor WA admin, template pesan WA)
+// ---------------------------------------------------------------------
+function readSettings_() {
+  const sh = ensureSheets_().set;
+  const last = sh.getLastRow();
+  const out = {};
+  SETTING_KEYS.forEach(function (k) { out[k] = ''; });
+  if (last < 2) return out;
+  const rows = sh.getRange(2, 1, last - 1, 2).getValues();
+  rows.forEach(function (r) {
+    const k = String(r[0] || '').trim();
+    if (SETTING_KEYS.indexOf(k) !== -1) out[k] = String(r[1] === null || r[1] === undefined ? '' : r[1]);
+  });
+  return out;
+}
+
+// Yang boleh dilihat klien (template pesan WA hanya untuk vendor)
+function publicSettings_() {
+  const st = readSettings_();
+  return { namaVendor: st.namaVendor, whatsappAdmin: st.whatsappAdmin };
+}
+
+function normalizePhone_(v) {
+  let d = String(v || '').replace(/[^0-9]/g, '');
+  if (d.indexOf('0') === 0) d = '62' + d.slice(1);
+  else if (d.indexOf('8') === 0) d = '62' + d;
+  return d.slice(0, 20);
+}
+
+function actionSettings_(src) {
+  return { ok: true, now: Date.now(), settings: publicSettings_() };
+}
+
+function actionGetSettings_(src) {
+  if (!isAdmin_(src)) return adminError_(src);
+  return { ok: true, settings: readSettings_() };
+}
+
+function actionSaveSettings_(src) {
+  if (!isAdmin_(src)) return adminError_(src);
+  const incoming = src.settings || {};
+  const clean = {};
+  if (Object.prototype.hasOwnProperty.call(incoming, 'namaVendor')) clean.namaVendor = String(incoming.namaVendor || '').trim().slice(0, 80);
+  if (Object.prototype.hasOwnProperty.call(incoming, 'whatsappAdmin')) clean.whatsappAdmin = normalizePhone_(incoming.whatsappAdmin);
+  if (Object.prototype.hasOwnProperty.call(incoming, 'waTemplate')) clean.waTemplate = String(incoming.waTemplate || '').slice(0, 2000);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const sh = ensureSheets_().set;
+    const last = sh.getLastRow();
+    const rows = last >= 2 ? sh.getRange(2, 1, last - 1, 2).getValues() : [];
+    Object.keys(clean).forEach(function (k) {
+      let rowIdx = -1;
+      for (let i = 0; i < rows.length; i++) { if (String(rows[i][0]).trim() === k) { rowIdx = i + 2; break; } }
+      if (rowIdx === -1) { rowIdx = sh.getLastRow() + 1; sh.getRange(rowIdx, 1).setValue(k); rows.push([k, '']); }
+      // format teks (@) mencegah Sheet mengubah nomor WA menjadi angka (angka 0 di depan hilang)
+      sh.getRange(rowIdx, 2).setNumberFormat('@');
+      sh.getRange(rowIdx, 2).setValue(clean[k]);
+    });
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: true, settings: readSettings_() };
 }

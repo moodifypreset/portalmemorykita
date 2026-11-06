@@ -138,6 +138,33 @@
         </div>
     </div>
 
+    <!-- PENGATURAN STUDIO (mode server) -->
+    <div id="settingsBox" class="hidden bg-white max-w-xl w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200">
+            <h2 class="font-bold text-slate-800"><i class="fa-solid fa-sliders mr-2 text-slate-400"></i>Pengaturan Studio</h2>
+            <p class="text-[11px] text-slate-500">Disimpan di Google Sheet dan berlaku untuk semua link, termasuk yang sudah terkirim ke klien. Tidak perlu upload ulang file.</p>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Studio</label>
+                <input type="text" id="setNamaVendor" placeholder="Cth: Memory Kita Photo" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">No. WhatsApp Admin (penerima list foto dari klien)</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-brands fa-whatsapp text-slate-400"></i></div>
+                    <input type="text" id="setWaAdmin" inputmode="tel" placeholder="Cth: 08123456789 atau 628123456789" class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
+                </div>
+                <p class="text-[11px] text-slate-500 mt-1">Awalan 0 otomatis diubah menjadi 62.</p>
+            </div>
+            <p class="text-[11px] text-slate-500 leading-relaxed bg-slate-50 border border-slate-200 rounded-lg p-3">Format Pesan WhatsApp (kotak di atas) ikut disimpan, jadi sama di semua perangkat. Ubah dulu isinya di sana, lalu klik Simpan.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button onclick="saveServerSettings()" id="btnSaveSettings" class="py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition flex justify-center items-center gap-2 shadow-md"><i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Server</button>
+                <button onclick="loadServerSettings(false)" class="py-3 bg-white border border-slate-300 hover:border-blue-600 hover:text-blue-600 text-slate-700 text-sm font-bold rounded-xl transition flex justify-center items-center gap-2"><i class="fa-solid fa-cloud-arrow-down"></i> Muat dari Server</button>
+            </div>
+        </div>
+    </div>
+
     <!-- DAFTAR LINK KLIEN (mode server) -->
     <div id="listBox" class="hidden bg-white max-w-xl w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
         <div class="px-6 py-4 flex items-center justify-between border-b border-slate-200">
@@ -171,7 +198,11 @@
             if (serverUrl()) {
                 document.getElementById('serverBox').classList.remove('hidden');
                 document.getElementById('listBox').classList.remove('hidden');
+                document.getElementById('settingsBox').classList.remove('hidden');
                 document.getElementById('adminKey').value = localStorage.getItem('cpAdminKey') || '';
+                // isi awal dari pengaturan.js (dipakai jika server belum berisi), lalu timpa dengan data server
+                document.getElementById('setNamaVendor').value = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) || '';
+                document.getElementById('setWaAdmin').value = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.whatsappAdmin) || '';
             }
 
             const savedTemplate = localStorage.getItem('customWaTemplate');
@@ -180,6 +211,8 @@
             } else {
                 document.getElementById('waTemplate').value = DEFAULT_TEMPLATE;
             }
+
+            if (serverUrl() && localStorage.getItem('cpAdminKey')) loadServerSettings(true);   // ambil pengaturan tersimpan di server
         });
 
         function saveTemplate() {
@@ -341,6 +374,47 @@
                 btnSendWA.innerHTML = '<i class="fa-brands fa-whatsapp text-lg"></i> Kirim ke Klien';
             } else {
                 btnSendWA.innerHTML = '<i class="fa-brands fa-whatsapp text-lg"></i> Buka WhatsApp';
+            }
+        }
+
+        // ===== PENGATURAN STUDIO (mode server) =====
+        async function loadServerSettings(silent) {
+            const adminKey = document.getElementById('adminKey').value.trim() || localStorage.getItem('cpAdminKey') || '';
+            if (!adminKey) { if (!silent) showAlert('Isi Kunci Admin terlebih dahulu.', true); return; }
+            try {
+                const res = await serverPost({ action: 'getSettings', adminKey });
+                if (!res.ok) { if (!silent) showAlert(serverErrorText(res.error), true); return; }
+                if (!document.getElementById('adminKey').value) document.getElementById('adminKey').value = adminKey;
+                localStorage.setItem('cpAdminKey', adminKey);
+                const st = res.settings || {};
+                if (st.namaVendor) document.getElementById('setNamaVendor').value = st.namaVendor;
+                if (st.whatsappAdmin) document.getElementById('setWaAdmin').value = st.whatsappAdmin;
+                if (st.waTemplate) { document.getElementById('waTemplate').value = st.waTemplate; saveTemplate(); }
+                if (!silent) showAlert('Pengaturan dimuat dari server.');
+            } catch (e) {
+                if (!silent) showAlert('Server tidak dapat dihubungi.', true);
+            }
+        }
+
+        async function saveServerSettings() {
+            const adminKey = document.getElementById('adminKey').value.trim();
+            if (!adminKey) return showAlert('Isi Kunci Admin terlebih dahulu.', true);
+            const nama = document.getElementById('setNamaVendor').value.trim();
+            const wa = document.getElementById('setWaAdmin').value.trim();
+            if (!nama) return showAlert('Nama studio tidak boleh kosong.', true);
+            if (wa.replace(/[^0-9]/g, '').length < 8) return showAlert('Nomor WhatsApp admin tidak valid.', true);
+            const btn = document.getElementById('btnSaveSettings');
+            btn.disabled = true; btn.classList.add('opacity-60');
+            try {
+                const res = await serverPost({ action: 'saveSettings', adminKey, settings: { namaVendor: nama, whatsappAdmin: wa, waTemplate: document.getElementById('waTemplate').value } });
+                if (!res.ok) return showAlert(serverErrorText(res.error), true);
+                localStorage.setItem('cpAdminKey', adminKey);
+                document.getElementById('setWaAdmin').value = res.settings.whatsappAdmin;   // sudah dinormalkan (62...)
+                showAlert('Pengaturan disimpan. Berlaku untuk semua link.');
+            } catch (e) {
+                showAlert('Server tidak dapat dihubungi.', true);
+            } finally {
+                btn.disabled = false; btn.classList.remove('opacity-60');
             }
         }
 

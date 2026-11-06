@@ -862,21 +862,74 @@
         const pendingKey = () => 'cp_pending_' + (appState.remote ? appState.remote.code : '');
         const hasPending = () => { try { return !!appState.remote && localStorage.getItem(pendingKey()) === '1'; } catch (e) { return false; } };
 
+        // Semua permintaan memakai POST (jalur yang sama dengan pembuatan link di generatorLink).
+        // Jika POST gagal di level jaringan/CORS, dicoba sekali lagi lewat GET sebagai cadangan.
         async function serverCall(method, payload, timeoutMs = 20000) {
             const base = serverUrl();
-            const ctrl = new AbortController();
-            const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+            const attempt = async (viaGet) => {
+                const ctrl = new AbortController();
+                const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+                try {
+                    let res;
+                    if (viaGet) {
+                        const qs = new URLSearchParams(Object.assign({}, payload, { _t: Date.now() })).toString();
+                        res = await fetch(base + (base.includes('?') ? '&' : '?') + qs, { signal: ctrl.signal });
+                    } else {
+                        // text/plain = "simple request": tidak memicu preflight CORS yang tidak didukung Apps Script
+                        res = await fetch(base, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctrl.signal });
+                    }
+                    return await res.json();
+                } finally { clearTimeout(timer); }
+            };
             try {
-                let res;
-                if (method === 'GET') {
-                    const qs = new URLSearchParams(Object.assign({}, payload, { _t: Date.now() })).toString();
-                    res = await fetch(base + (base.includes('?') ? '&' : '?') + qs, { signal: ctrl.signal });
-                } else {
-                    // text/plain = "simple request": tidak memicu preflight CORS yang tidak didukung Apps Script
-                    res = await fetch(base, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctrl.signal });
-                }
-                return await res.json();
-            } finally { clearTimeout(timer); }
+                return await attempt(false);
+            } catch (e) {
+                if (e && e.name === 'AbortError') throw e;
+                return await attempt(true);
+            }
+        }
+
+        // ----- Pengaturan studio dari server (nama studio, nomor WA admin) -----
+        // pengaturan.js menjadi cadangan jika server belum diisi / tidak terjangkau.
+        const SETTINGS_CACHE_KEY = 'cp_settings_v1';
+
+        function applySettings(st, { persist = true, refresh = true } = {}) {
+            if (!st || typeof CONFIG_APP === 'undefined') return;
+            if (st.namaVendor) CONFIG_APP.namaVendor = st.namaVendor;
+            if (st.whatsappAdmin) CONFIG_APP.whatsappAdmin = st.whatsappAdmin;
+            watermarkDataUri = null;   // watermark memakai nama studio
+
+            const name = CONFIG_APP.namaVendor || 'Studio Foto';
+            const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+            set('footerVendorName', name);
+            set('headerVendorName', name);
+            set('heroVendor', name);
+            set('pageTitle', `Client Portal - ${name}`);
+
+            const waBtn = document.getElementById('welcomeWaBtn');
+            if (waBtn && CONFIG_APP.whatsappAdmin && !document.getElementById('welcomeSection').classList.contains('hidden')) {
+                waBtn.href = `https://wa.me/${CONFIG_APP.whatsappAdmin}`;
+                waBtn.classList.remove('hidden');
+            }
+
+            if (persist) {
+                try { localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({ namaVendor: st.namaVendor || '', whatsappAdmin: st.whatsappAdmin || '' })); } catch (e) {}
+            }
+            if (refresh) applyTranslations();   // teks sambutan memuat nama studio
+        }
+
+        function applyCachedSettings() {
+            try {
+                const raw = localStorage.getItem(SETTINGS_CACHE_KEY);
+                if (raw) applySettings(JSON.parse(raw), { persist: false, refresh: false });
+            } catch (e) {}
+        }
+
+        async function loadSettingsOnly() {
+            try {
+                const data = await serverCall('GET', { action: 'settings' }, 12000);
+                if (data && data.ok) applySettings(data.settings);
+            } catch (e) { /* pakai salinan/cadangan */ }
         }
 
         async function loadRemoteConfig(code) {
@@ -890,6 +943,7 @@
                 throw err;
             }
             if (data.now) appState.timeOffset = data.now - Math.round((t0 + t1) / 2);   // jam server = acuan
+            if (data.settings) applySettings(data.settings);
             try { localStorage.setItem(cfgCacheKey(code), JSON.stringify({ link: data.link, selection: data.selection })); } catch (e) {}
             return data;
         }
@@ -1444,6 +1498,7 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             updateDarkModeIcon(document.documentElement.classList.contains('dark'));
+            if (serverUrl()) applyCachedSettings();   // nama studio & nomor WA terakhir dari server (tanpa menunggu jaringan)
 
             if (typeof CONFIG_APP !== 'undefined') {
                 document.getElementById('footerVendorName').textContent = CONFIG_APP.namaVendor || 'Studio Foto';
@@ -1522,6 +1577,7 @@
                 }
             }
             }   // akhir mode lama
+            if (!urlCode && serverUrl()) loadSettingsOnly();   // halaman sambutan / link lama: ambil pengaturan terbaru
 
             const lightboxEl = document.getElementById('lightbox');
             lightboxEl.addEventListener('touchstart', e => {
