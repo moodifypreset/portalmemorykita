@@ -319,8 +319,8 @@ html[data-page='admin'][data-theme] input[type=checkbox] { accent-color: var(--a
 
 /* header: berwarna (bukan putih) dan berbeda dari kartu di bawahnya */
 html[data-theme] .app-head { background: var(--headbg) !important; border-bottom: 1px solid var(--headbd); color: var(--headfg); }
-html[data-page][data-theme] .app-head h1 { color: var(--headfg) !important; font-family: var(--head); letter-spacing: -.01em; }
-html[data-page][data-theme] .app-head p { color: var(--headsub) !important; }
+html[data-page][data-theme] body .app-head h1 { color: var(--headfg) !important; font-family: var(--head); letter-spacing: -.01em; }
+html[data-page][data-theme] body .app-head p { color: var(--headsub) !important; }
 html[data-theme] .app-head .hdr-icon, html[data-theme] .logo-glyph { background: transparent !important; color: var(--hicon) !important; box-shadow: none !important; border: 0 !important; }
 html[data-theme] .app-head .logo-glyph, html[data-theme] .app-head #headerLogoBox { color: var(--hicon) !important; }
 html[data-theme] .hbtn { display:inline-flex; align-items:center; gap:.25rem; font-size:.75rem; line-height:1rem; font-weight:700; padding:.5rem .75rem; border-radius:.6rem; background: var(--hbtnbg) !important; color: var(--hbtnfg) !important; border:1px solid var(--hbtnbd) !important; transition: background .15s, border-color .15s; cursor:pointer; text-decoration:none; }
@@ -329,12 +329,12 @@ html[data-theme] .hbtn-pri { background: var(--hpribg) !important; color: var(--
 html[data-theme] .hbtn-pri:hover { filter: brightness(.93); background: var(--hpribg) !important; }
 /* judul panel (mis. "Link Klien & Pilihan"): pita berwarna lembut, tidak putih */
 html[data-theme] .sec-head { background: var(--sechead) !important; border-bottom: 1px solid var(--sechbd) !important; }
-html[data-page][data-theme] .sec-head h2, html[data-page][data-theme] .sec-head h3 { color: var(--text) !important; }
-html[data-page][data-theme] .sec-head p { color: var(--text2) !important; }
+html[data-page][data-theme] body .sec-head h2, html[data-page][data-theme] body .sec-head h3 { color: var(--text) !important; }
+html[data-page][data-theme] body .sec-head p { color: var(--text2) !important; }
 html[data-theme] .login-brand { text-align:center; padding: 26px 24px 20px; background: var(--headbg); border-bottom: 1px solid var(--headbd); }
 html[data-theme] .login-brand .hdr-icon { width:52px; height:52px; margin:0 auto 8px; display:flex; align-items:center; justify-content:center; font-size:32px; background: transparent !important; color: var(--hicon) !important; }
-html[data-theme] .login-brand h1 { font-family: var(--head); color: var(--headfg); font-size:1.4rem; font-weight:800; letter-spacing:-.01em; }
-html[data-theme] .login-brand p { color: var(--headsub); font-size:.75rem; margin-top:.25rem; }
+html[data-page][data-theme] body .login-brand h1 { font-family: var(--head); color: var(--headfg) !important; font-size:1.4rem; font-weight:800; letter-spacing:-.01em; }
+html[data-page][data-theme] body .login-brand p { color: var(--headsub) !important; font-size:.75rem; margin-top:.25rem; }
 html[data-theme] .tema-card { border:2px solid var(--border); border-radius:14px; padding:10px; cursor:pointer; background: var(--surface); transition: border-color .15s, box-shadow .15s; text-align:left; }
 html[data-theme] .tema-card:hover { border-color: var(--accb); }
 html[data-theme] .tema-card.active { border-color: var(--acc); box-shadow: 0 0 0 3px var(--accsoft); }
