@@ -10,18 +10,21 @@
  *  CARA PASANG (sekali saja) - lihat juga PANDUAN_SERVER.md:
  *   1. Buat Google Sheet baru (kosong).
  *   2. Extensions > Apps Script, hapus isi bawaan, tempel seluruh kode ini.
- *   3. Ganti ADMIN_KEY di bawah dengan kunci rahasia buatan Anda sendiri.
+ *   3. Ganti ADMIN_KEY di bawah dengan password admin buatan Anda sendiri
+ *      (dipakai untuk login di generatorLink & pengaturanStudio; bisa diganti
+ *      dari halaman Pengaturan Studio setelah login).
  *   4. Jalankan fungsi `setup` sekali (tombol Run) lalu beri izin akses.
  *   5. Deploy > New deployment > Web app
  *        Execute as : Me
  *        Who has access : Anyone
- *      Salin URL Web app -> tempel ke `urlServer` di pengaturan.js
+ *      Salin URL Web app -> tempel di halaman login admin (pengaturanStudio.html)
  *   6. Setiap mengubah kode ini: Deploy > Manage deployments > Edit > New version.
  * =====================================================================
  */
 
 // ====== WAJIB DIGANTI ======
 const ADMIN_KEY = 'GANTI-DENGAN-KUNCI-RAHASIA';
+const DEFAULT_ADMIN_KEY = 'GANTI-DENGAN-KUNCI-RAHASIA';   // jangan diubah (penanda nilai bawaan)
 
 // ====== PENGATURAN ======
 const SHEET_LINKS = 'Links';
@@ -29,12 +32,16 @@ const SHEET_PILIHAN = 'Pilihan';
 const SHEET_SETTINGS = 'Pengaturan';
 const GRACE_MS = 30 * 1000;        // toleransi 30 detik setelah batas (menutup jeda simpan otomatis)
 const MAX_ITEMS = 700;             // maksimal foto terpilih per klien
+const SESSION_MS = 12 * 3600 * 1000;          // login biasa: 12 jam
+const REMEMBER_MS = 30 * 24 * 3600 * 1000;    // "tetap masuk": 30 hari
+const MAX_FAILS = 5;                          // salah password berturut-turut sebelum dikunci
+const LOCK_MS = 5 * 60 * 1000;                // lama penguncian
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 const LINK_HEADERS = ['Kode', 'Nama Klien', 'Folder ID', 'Kuota', 'Batas Waktu', 'Status', 'Proteksi', 'Watermark', 'Dibuat', 'No. WA'];
 const SEL_HEADERS = ['Kode', 'Nama Klien', 'Jumlah', 'Daftar Foto', 'Data (JSON)', 'Diperbarui'];
 // Pengaturan studio: kunci -> nilai awal (nama, nomor WA admin, template pesan WA)
-const SETTING_KEYS = ['namaVendor', 'whatsappAdmin', 'waTemplate'];
+const SETTING_KEYS = ['namaVendor', 'whatsappAdmin', 'waTemplate', 'googleApiKey'];
 // Kolom Links (1-based)
 const L = { CODE: 1, NAME: 2, FOLDER: 3, KUOTA: 4, DEADLINE: 5, STATUS: 6, PROT: 7, WM: 8, CREATED: 9, PHONE: 10 };
 
@@ -68,7 +75,9 @@ function handle_(params, body) {
       case 'settings':     return json_(actionSettings_(src));
       case 'getSettings':  return json_(actionGetSettings_(src));
       case 'saveSettings': return json_(actionSaveSettings_(src));
-      case 'ping':       return json_({ ok: true, now: Date.now() });
+      case 'login':          return json_(actionLogin_(src));
+      case 'changePassword': return json_(actionChangePassword_(src));
+      case 'ping':       return json_({ ok: true, now: Date.now(), configured: passwordConfigured_() });
       default:           return json_({ ok: false, error: 'unknown_action' });
     }
   } catch (err) {
@@ -132,13 +141,123 @@ function toMs_(v) {
   return isNaN(t) ? null : t;
 }
 
+// ---------------------------------------------------------------------
+// Login admin: password -> token bertanda tangan (HMAC) yang kedaluwarsa.
+// Password awal = ADMIN_KEY. Setelah diganti dari halaman Pengaturan Studio,
+// yang dipakai adalah hash tersimpan di Script Properties (ADMIN_KEY diabaikan).
+// ---------------------------------------------------------------------
+function props_() { return PropertiesService.getScriptProperties(); }
+
+function b64_(bytes) { return Utilities.base64EncodeWebSafe(bytes); }
+
+function sha_(text) {
+  return b64_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8));
+}
+
+function safeEq_(a, b) {
+  a = String(a); b = String(b);
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+
+function tokenSecret_() {
+  const p = props_();
+  let s = p.getProperty('TOKEN_SECRET');
+  if (!s) { s = Utilities.getUuid() + Utilities.getUuid(); p.setProperty('TOKEN_SECRET', s); }
+  return s;
+}
+
+function signToken_(exp) {
+  return b64_(Utilities.computeHmacSha256Signature('adm.' + exp, tokenSecret_()));
+}
+
+function makeToken_(ms) {
+  const exp = Date.now() + ms;
+  return { token: exp + '.' + signToken_(exp), expires: exp };
+}
+
+function tokenOk_(t) {
+  const m = /^(\d{10,16})\.([A-Za-z0-9_=-]{20,80})$/.exec(String(t || ''));
+  if (!m) return false;
+  if (Number(m[1]) <= Date.now()) return false;
+  return safeEq_(m[2], signToken_(m[1]));
+}
+
+function passwordConfigured_() {
+  return !!props_().getProperty('PW_HASH') || ADMIN_KEY !== DEFAULT_ADMIN_KEY;
+}
+
+function passwordMatches_(pw) {
+  pw = String(pw === undefined || pw === null ? '' : pw);
+  const p = props_();
+  const h = p.getProperty('PW_HASH');
+  if (h) return safeEq_(sha_(p.getProperty('PW_SALT') + ':' + pw), h);
+  return ADMIN_KEY !== DEFAULT_ADMIN_KEY && safeEq_(pw, ADMIN_KEY);
+}
+
+function lockedUntil_() {
+  const u = Number(props_().getProperty('FAIL_UNTIL') || 0);
+  return u > Date.now() ? u : 0;
+}
+
+// Memeriksa password dengan pembatasan percobaan (anti tebak-tebakan)
+function checkPassword_(pw) {
+  if (lockedUntil_()) return false;
+  const p = props_();
+  if (passwordMatches_(pw)) { p.setProperty('FAIL_COUNT', '0'); return true; }
+  let n = Number(p.getProperty('FAIL_COUNT') || 0) + 1;
+  if (n >= MAX_FAILS) { p.setProperty('FAIL_UNTIL', String(Date.now() + LOCK_MS)); n = 0; }
+  p.setProperty('FAIL_COUNT', String(n));
+  return false;
+}
+
 function isAdmin_(src) {
-  return ADMIN_KEY !== 'GANTI-DENGAN-KUNCI-RAHASIA' && String(src.adminKey || '') === ADMIN_KEY;
+  if (!passwordConfigured_()) return false;
+  if (tokenOk_(src.token)) return true;
+  if (src.adminKey !== undefined) return checkPassword_(src.adminKey);   // kompatibilitas: password dikirim langsung
+  return false;
 }
 
 function adminError_(src) {
-  if (ADMIN_KEY === 'GANTI-DENGAN-KUNCI-RAHASIA') return { ok: false, error: 'admin_key_not_set' };
+  if (!passwordConfigured_()) return { ok: false, error: 'admin_key_not_set' };
+  const u = lockedUntil_();
+  if (u) return { ok: false, error: 'locked', retryAfter: Math.ceil((u - Date.now()) / 1000) };
   return { ok: false, error: 'unauthorized' };
+}
+
+function actionLogin_(src) {
+  if (!passwordConfigured_()) return { ok: false, error: 'admin_key_not_set' };
+  if (!checkPassword_(src.password)) return adminError_(src);
+  const t = makeToken_(src.remember ? REMEMBER_MS : SESSION_MS);
+  return { ok: true, token: t.token, expires: t.expires };
+}
+
+function actionChangePassword_(src) {
+  if (!passwordConfigured_()) return { ok: false, error: 'admin_key_not_set' };
+  if (!tokenOk_(src.token)) return { ok: false, error: 'unauthorized' };
+  if (!checkPassword_(src.currentPassword)) {
+    const e = adminError_(src);
+    return e.error === 'locked' ? e : { ok: false, error: 'wrong_password' };
+  }
+  const np = String(src.newPassword || '');
+  if (np.length < 8 || np.length > 100) return { ok: false, error: 'weak_password' };
+  const p = props_();
+  const salt = Utilities.getUuid();
+  p.setProperty('PW_SALT', salt);
+  p.setProperty('PW_HASH', sha_(salt + ':' + np));
+  p.setProperty('TOKEN_SECRET', Utilities.getUuid() + Utilities.getUuid());   // semua sesi lama otomatis tidak berlaku
+  const t = makeToken_(SESSION_MS);
+  return { ok: true, token: t.token, expires: t.expires };
+}
+
+// Lupa password? Jalankan fungsi ini dari editor Apps Script (tombol Run).
+// Password kembali menjadi nilai ADMIN_KEY di atas dan semua sesi login dicabut.
+function resetPassword() {
+  const p = props_();
+  ['PW_HASH', 'PW_SALT', 'FAIL_COUNT', 'FAIL_UNTIL'].forEach(function (k) { p.deleteProperty(k); });
+  p.setProperty('TOKEN_SECRET', Utilities.getUuid() + Utilities.getUuid());
 }
 
 function readLinks_() {
@@ -350,7 +469,7 @@ function actionList_(src) {
 }
 
 // ---------------------------------------------------------------------
-// Pengaturan studio (nama, nomor WA admin, template pesan WA)
+// Pengaturan studio (nama, nomor WA admin, template pesan WA, Google API key)
 // ---------------------------------------------------------------------
 function readSettings_() {
   const sh = ensureSheets_().set;
@@ -369,7 +488,7 @@ function readSettings_() {
 // Yang boleh dilihat klien (template pesan WA hanya untuk vendor)
 function publicSettings_() {
   const st = readSettings_();
-  return { namaVendor: st.namaVendor, whatsappAdmin: st.whatsappAdmin };
+  return { namaVendor: st.namaVendor, whatsappAdmin: st.whatsappAdmin, googleApiKey: st.googleApiKey };
 }
 
 function normalizePhone_(v) {
@@ -395,6 +514,11 @@ function actionSaveSettings_(src) {
   if (Object.prototype.hasOwnProperty.call(incoming, 'namaVendor')) clean.namaVendor = String(incoming.namaVendor || '').trim().slice(0, 80);
   if (Object.prototype.hasOwnProperty.call(incoming, 'whatsappAdmin')) clean.whatsappAdmin = normalizePhone_(incoming.whatsappAdmin);
   if (Object.prototype.hasOwnProperty.call(incoming, 'waTemplate')) clean.waTemplate = String(incoming.waTemplate || '').slice(0, 2000);
+  if (Object.prototype.hasOwnProperty.call(incoming, 'googleApiKey')) {
+    const key = String(incoming.googleApiKey || '').trim();
+    if (key && !/^[A-Za-z0-9_-]{20,80}$/.test(key)) return { ok: false, error: 'bad_apikey' };
+    clean.googleApiKey = key;
+  }
 
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);

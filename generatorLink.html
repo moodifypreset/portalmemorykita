@@ -11,30 +11,30 @@
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
     </style>
     <script src="pengaturan.js"></script>
+    <script src="adminAuth.js"></script>
 </head>
 <body class="text-slate-800 flex flex-col items-center justify-center min-h-screen p-4 py-10 gap-6">
 
     <!-- BOX UTAMA: GENERATOR LINK -->
     <div class="bg-white max-w-xl w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-        <div class="bg-slate-900 px-6 py-5 flex items-center gap-4">
-            <div class="bg-white/20 text-white w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-inner">
-                <i class="fa-solid fa-link"></i>
+        <div class="bg-slate-900 px-6 py-5 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="bg-white/20 text-white w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-inner">
+                    <i class="fa-solid fa-link"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-white text-lg">Secure Link Generator</h1>
+                    <p class="text-slate-400 text-xs font-medium uppercase tracking-wider">With Quota Hashing & Protection</p>
+                </div>
             </div>
-            <div>
-                <h1 class="font-bold text-white text-lg">Secure Link Generator</h1>
-                <p class="text-slate-400 text-xs font-medium uppercase tracking-wider">With Quota Hashing & Protection</p>
+            <div class="shrink-0 flex gap-2">
+                <a id="lnkStudio" href="pengaturanStudio.html" class="text-xs font-bold text-slate-300 hover:text-white transition border border-slate-600 hover:border-slate-400 rounded-lg px-3 py-2"><i class="fa-solid fa-sliders mr-1"></i> Pengaturan</a>
+                <button id="btnLogout" onclick="Admin.logout()" class="text-xs font-bold text-slate-300 hover:text-white transition border border-slate-600 hover:border-slate-400 rounded-lg px-3 py-2"><i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar</button>
             </div>
         </div>
 
         <div class="p-6 md:p-8 space-y-5">
             <div class="hidden"><input type="text" id="baseUrl"></div>
-
-            <!-- MODE SERVER (tampil otomatis jika urlServer di pengaturan.js diisi) -->
-            <div id="serverBox" class="hidden bg-emerald-50 p-4 rounded-xl border border-emerald-200 space-y-2">
-                <label class="block text-xs font-bold text-emerald-800"><i class="fa-solid fa-cloud mr-1"></i> Mode Server Aktif - Kunci Admin</label>
-                <input type="password" id="adminKey" autocomplete="off" placeholder="Kunci rahasia yang Anda isi di Code.gs" class="w-full px-3 py-2.5 bg-white border border-emerald-300 rounded-lg focus:border-emerald-600 outline-none transition text-sm">
-                <p class="text-[11px] text-emerald-700 leading-relaxed">Link klien menjadi pendek dan pilihan foto tersimpan otomatis di Google Sheet. Batas waktu dicek oleh server. Kunci disimpan hanya di browser ini.</p>
-            </div>
 
             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -108,7 +108,7 @@
                 </div>
             </div>
 
-            <div>
+            <div id="tplBlock">
                 <label class="block text-sm font-bold text-slate-700 mb-1">Format Pesan WhatsApp (Auto-Save)</label>
                 <p class="text-[11px] text-slate-500 mb-2 leading-relaxed">
                     Gunakan kode <span class="font-mono bg-blue-100 text-blue-700 px-1 rounded">[NAMA]</span> untuk menyisipkan nama, <span class="font-mono bg-blue-100 text-blue-700 px-1 rounded">[LINK]</span> untuk tautan galeri, dan <span class="font-mono bg-blue-100 text-blue-700 px-1 rounded">[BATAS]</span> untuk batas waktu memilih (baris ini otomatis hilang jika tanpa batas). Bebas diedit!
@@ -117,6 +117,11 @@
                 <div class="flex justify-end mt-1">
                     <button onclick="resetTemplate()" class="text-[10px] font-bold text-slate-400 hover:text-blue-600 transition uppercase tracking-wider"><i class="fa-solid fa-rotate-left"></i> Reset ke Standar</button>
                 </div>
+            </div>
+
+            <div id="tplNotice" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
+                <i class="fa-solid fa-sliders text-slate-400 mt-0.5"></i>
+                <span>Format pesan WhatsApp, nama studio, dan nomor admin diatur sekali di <a href="pengaturanStudio.html" class="font-bold text-blue-600 hover:underline">Pengaturan Studio</a> (tersimpan di server).</span>
             </div>
 
             <button id="btnGenerate" onclick="generateLink()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
@@ -134,33 +139,6 @@
                         <i class="fa-brands fa-whatsapp text-lg"></i> Kirim ke Klien
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- PENGATURAN STUDIO (mode server) -->
-    <div id="settingsBox" class="hidden bg-white max-w-xl w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-200">
-            <h2 class="font-bold text-slate-800"><i class="fa-solid fa-sliders mr-2 text-slate-400"></i>Pengaturan Studio</h2>
-            <p class="text-[11px] text-slate-500">Disimpan di Google Sheet dan berlaku untuk semua link, termasuk yang sudah terkirim ke klien. Tidak perlu upload ulang file.</p>
-        </div>
-        <div class="p-6 space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Studio</label>
-                <input type="text" id="setNamaVendor" placeholder="Cth: Memory Kita Photo" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">No. WhatsApp Admin (penerima list foto dari klien)</label>
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-brands fa-whatsapp text-slate-400"></i></div>
-                    <input type="text" id="setWaAdmin" inputmode="tel" placeholder="Cth: 08123456789 atau 628123456789" class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
-                </div>
-                <p class="text-[11px] text-slate-500 mt-1">Awalan 0 otomatis diubah menjadi 62.</p>
-            </div>
-            <p class="text-[11px] text-slate-500 leading-relaxed bg-slate-50 border border-slate-200 rounded-lg p-3">Format Pesan WhatsApp (kotak di atas) ikut disimpan, jadi sama di semua perangkat. Ubah dulu isinya di sana, lalu klik Simpan.</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button onclick="saveServerSettings()" id="btnSaveSettings" class="py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition flex justify-center items-center gap-2 shadow-md"><i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Server</button>
-                <button onclick="loadServerSettings(false)" class="py-3 bg-white border border-slate-300 hover:border-blue-600 hover:text-blue-600 text-slate-700 text-sm font-bold rounded-xl transition flex justify-center items-center gap-2"><i class="fa-solid fa-cloud-arrow-down"></i> Muat dari Server</button>
             </div>
         </div>
     </div>
@@ -195,25 +173,16 @@
             let portalUrl = currentUrl.includes("generatorLink.html") ? currentUrl.replace("generatorLink.html", "") : currentUrl.substring(0, currentUrl.lastIndexOf("/") + 1);
             document.getElementById('baseUrl').value = portalUrl;
 
-            if (serverUrl()) {
-                document.getElementById('serverBox').classList.remove('hidden');
-                document.getElementById('listBox').classList.remove('hidden');
-                document.getElementById('settingsBox').classList.remove('hidden');
-                document.getElementById('adminKey').value = localStorage.getItem('cpAdminKey') || '';
-                // isi awal dari pengaturan.js (dipakai jika server belum berisi), lalu timpa dengan data server
-                document.getElementById('setNamaVendor').value = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) || '';
-                document.getElementById('setWaAdmin').value = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.whatsappAdmin) || '';
-            }
+            document.getElementById('listBox').classList.remove('hidden');
+            document.getElementById('tplBlock').classList.add('hidden');
+            document.getElementById('tplNotice').classList.remove('hidden');
 
             const savedTemplate = localStorage.getItem('customWaTemplate');
-            if (savedTemplate) {
-                document.getElementById('waTemplate').value = savedTemplate;
-            } else {
-                document.getElementById('waTemplate').value = DEFAULT_TEMPLATE;
-            }
-
-            if (serverUrl() && localStorage.getItem('cpAdminKey')) loadServerSettings(true);   // ambil pengaturan tersimpan di server
+            document.getElementById('waTemplate').value = savedTemplate || DEFAULT_TEMPLATE;
         });
+
+        // Dipanggil setiap kali admin berhasil masuk
+        Admin.onReady(() => { loadServerSettings(true); loadLinkList(true); });
 
         function saveTemplate() {
             const currentText = document.getElementById('waTemplate').value;
@@ -293,34 +262,8 @@
         }
 
         // ===== SERVER =====
-        const serverUrl = () => (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.urlServer) ? String(CONFIG_APP.urlServer).trim() : '';
         const escapeHtml = (v) => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-        async function serverPost(body) {
-            const res = await fetch(serverUrl(), { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
-            return await res.json();
-        }
-
-        function serverErrorText(code) {
-            const map = {
-                unauthorized: 'Kunci Admin salah.',
-                admin_key_not_set: 'ADMIN_KEY di Code.gs belum diganti dari nilai bawaan.',
-                bad_folder: 'Link / ID folder Google Drive tidak valid.',
-                not_found: 'Link tidak ditemukan di Sheet.'
-            };
-            return map[code] || ('Server menolak permintaan (' + (code || 'tidak diketahui') + ').');
-        }
-
-        function buildLegacyParams(clientName, kuota, deadlineMs, folderId) {
-            let params = [];
-            if (clientName !== "") params.push(`n=${encodeURIComponent(clientName.replace(/\s+/g, '-'))}`);
-            if (kuota && parseInt(kuota) > 0) params.push(`k=${btoa(kuota.toString()).replace(/=/g, '')}`);
-            if (deadlineMs !== null) params.push(`d=${btoa(String(Math.floor(deadlineMs / 1000))).replace(/=/g, '')}`);
-            if (document.getElementById('protCheck').checked) params.push('prot=1');
-            if (document.getElementById('wmCheck').checked) params.push('wm=1');
-            params.push(`i=${folderId}`);
-            return params.join('&');
-        }
+        const serverErrorText = (code, res) => Admin.errorText(code, res);
 
         async function generateLink() {
             const baseUrl = document.getElementById('baseUrl').value.trim();
@@ -338,33 +281,24 @@
             if (deadlineMs !== null && deadlineMs <= Date.now() && !confirm('Batas waktu yang dipilih sudah lewat, klien tidak akan bisa memilih foto sama sekali. Tetap buat link?')) return;
 
             let finalUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-            let useLegacy = !serverUrl();
 
-            if (!useLegacy) {
-                const adminKey = document.getElementById('adminKey').value.trim();
-                if (!adminKey) return showAlert('Isi Kunci Admin terlebih dahulu.', true);
-                const btn = document.getElementById('btnGenerate');
-                btn.disabled = true; btn.classList.add('opacity-60');
-                try {
-                    const res = await serverPost({
-                        action: 'createLink', adminKey, name: clientName, folderId,
-                        kuota: kuota && parseInt(kuota) > 0 ? parseInt(kuota) : null,
-                        deadline: deadlineMs, prot: document.getElementById('protCheck').checked,
-                        wm: document.getElementById('wmCheck').checked, phone: clientPhone
-                    });
-                    if (!res.ok) return showAlert(serverErrorText(res.error), true);
-                    localStorage.setItem('cpAdminKey', adminKey);
-                    finalUrl += '?c=' + res.code;
-                    if (document.getElementById('linkList').dataset.loaded) loadLinkList();
-                } catch (e) {
-                    if (!confirm('Server tidak dapat dihubungi. Buat link biasa (tanpa penyimpanan di server)?')) return;
-                    useLegacy = true;
-                } finally {
-                    btn.disabled = false; btn.classList.remove('opacity-60');
-                }
+            const btn = document.getElementById('btnGenerate');
+            btn.disabled = true; btn.classList.add('opacity-60');
+            try {
+                const res = await Admin.call({
+                    action: 'createLink', name: clientName, folderId,
+                    kuota: kuota && parseInt(kuota) > 0 ? parseInt(kuota) : null,
+                    deadline: deadlineMs, prot: document.getElementById('protCheck').checked,
+                    wm: document.getElementById('wmCheck').checked, phone: clientPhone
+                });
+                if (!res.ok) { if (res.error !== 'unauthorized') showAlert(serverErrorText(res.error, res), true); return; }
+                finalUrl += '?c=' + res.code;
+                if (document.getElementById('linkList').dataset.loaded) loadLinkList();
+            } catch (e) {
+                return showAlert('Server tidak dapat dihubungi. Periksa internet Anda.', true);
+            } finally {
+                btn.disabled = false; btn.classList.remove('opacity-60');
             }
-
-            if (useLegacy) finalUrl += '?' + buildLegacyParams(clientName, kuota, deadlineMs, folderId);
 
             document.getElementById('resultBox').classList.remove('hidden');
             document.getElementById('finalUrl').value = finalUrl;
@@ -377,45 +311,14 @@
             }
         }
 
-        // ===== PENGATURAN STUDIO (mode server) =====
+        // ===== FORMAT PESAN dari Pengaturan Studio (mode server) =====
         async function loadServerSettings(silent) {
-            const adminKey = document.getElementById('adminKey').value.trim() || localStorage.getItem('cpAdminKey') || '';
-            if (!adminKey) { if (!silent) showAlert('Isi Kunci Admin terlebih dahulu.', true); return; }
             try {
-                const res = await serverPost({ action: 'getSettings', adminKey });
-                if (!res.ok) { if (!silent) showAlert(serverErrorText(res.error), true); return; }
-                if (!document.getElementById('adminKey').value) document.getElementById('adminKey').value = adminKey;
-                localStorage.setItem('cpAdminKey', adminKey);
+                const res = await Admin.call({ action: 'getSettings' });
+                if (!res.ok) return;
                 const st = res.settings || {};
-                if (st.namaVendor) document.getElementById('setNamaVendor').value = st.namaVendor;
-                if (st.whatsappAdmin) document.getElementById('setWaAdmin').value = st.whatsappAdmin;
                 if (st.waTemplate) { document.getElementById('waTemplate').value = st.waTemplate; saveTemplate(); }
-                if (!silent) showAlert('Pengaturan dimuat dari server.');
-            } catch (e) {
-                if (!silent) showAlert('Server tidak dapat dihubungi.', true);
-            }
-        }
-
-        async function saveServerSettings() {
-            const adminKey = document.getElementById('adminKey').value.trim();
-            if (!adminKey) return showAlert('Isi Kunci Admin terlebih dahulu.', true);
-            const nama = document.getElementById('setNamaVendor').value.trim();
-            const wa = document.getElementById('setWaAdmin').value.trim();
-            if (!nama) return showAlert('Nama studio tidak boleh kosong.', true);
-            if (wa.replace(/[^0-9]/g, '').length < 8) return showAlert('Nomor WhatsApp admin tidak valid.', true);
-            const btn = document.getElementById('btnSaveSettings');
-            btn.disabled = true; btn.classList.add('opacity-60');
-            try {
-                const res = await serverPost({ action: 'saveSettings', adminKey, settings: { namaVendor: nama, whatsappAdmin: wa, waTemplate: document.getElementById('waTemplate').value } });
-                if (!res.ok) return showAlert(serverErrorText(res.error), true);
-                localStorage.setItem('cpAdminKey', adminKey);
-                document.getElementById('setWaAdmin').value = res.settings.whatsappAdmin;   // sudah dinormalkan (62...)
-                showAlert('Pengaturan disimpan. Berlaku untuk semua link.');
-            } catch (e) {
-                showAlert('Server tidak dapat dihubungi.', true);
-            } finally {
-                btn.disabled = false; btn.classList.remove('opacity-60');
-            }
+            } catch (e) { /* pakai template tersimpan di browser */ }
         }
 
         // ===== DAFTAR LINK (mode server) =====
@@ -425,16 +328,13 @@
         }
 
         let currentLinks = [];
-        async function loadLinkList() {
-            const adminKey = document.getElementById('adminKey').value.trim();
-            if (!adminKey) return showAlert('Isi Kunci Admin terlebih dahulu.', true);
+        async function loadLinkList(silent) {
             const box = document.getElementById('linkList');
             const icon = document.querySelector('#btnLoadList i');
             icon.classList.add('fa-spin');
             try {
-                const res = await serverPost({ action: 'list', adminKey });
-                if (!res.ok) return showAlert(serverErrorText(res.error), true);
-                localStorage.setItem('cpAdminKey', adminKey);
+                const res = await Admin.call({ action: 'list' });
+                if (!res.ok) { if (res.error !== 'unauthorized' && !silent) showAlert(serverErrorText(res.error, res), true); return; }
                 currentLinks = res.links;
                 box.dataset.loaded = '1';
                 renderLinkList(res.now);
@@ -486,9 +386,8 @@
         }
 
         async function updateLinkOnServer(code, fields) {
-            const adminKey = document.getElementById('adminKey').value.trim();
-            const res = await serverPost(Object.assign({ action: 'updateLink', adminKey, c: code }, fields));
-            if (!res.ok) { showAlert(serverErrorText(res.error), true); return false; }
+            const res = await Admin.call(Object.assign({ action: 'updateLink', c: code }, fields));
+            if (!res.ok) { if (res.error !== 'unauthorized') showAlert(serverErrorText(res.error, res), true); return false; }
             return true;
         }
 
