@@ -151,14 +151,22 @@
                 </div>
             </div>
             
-            <div class="flex items-center gap-2">
-                <button onclick="showTutorial(true)" class="flex items-center justify-center w-9 h-9 md:w-auto md:px-3 md:py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600" title="Panduan">
+            <div class="flex items-center gap-1.5 md:gap-2">
+                <span id="partnerChip" class="hidden items-center gap-1.5 px-2.5 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold border border-emerald-300 dark:border-emerald-700" title="">
+                    <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+                    <span id="partnerChipText" class="hidden md:inline"></span>
+                </span>
+                <button id="myPicksBtn" onclick="toggleMyPicks()" class="hidden items-center justify-center gap-2 h-9 px-3 bg-slate-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition shadow-md border-2 border-slate-900 dark:border-blue-500" title="Pilihan Fotoku">
+                    <i class="fa-solid fa-heart text-rose-400 dark:text-white"></i> <span id="myPicksText" class="hidden sm:inline" data-i18n="btnMyPicks">Pilihan Fotoku</span>
+                    <span id="myPicksCount" class="bg-white text-slate-900 text-[11px] font-extrabold min-w-[20px] h-5 px-1.5 rounded-full inline-flex items-center justify-center">0</span>
+                </button>
+                <button onclick="showTutorial(true)" class="flex items-center justify-center w-9 h-9 md:w-auto md:px-3 md:py-1.5 bg-blue-50 dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 text-blue-800 dark:text-slate-100 rounded-lg text-sm transition shadow-md border-2 border-blue-500 dark:border-blue-400" title="Panduan">
                     <i class="fa-solid fa-circle-question text-blue-600 dark:text-blue-400"></i> <span class="hidden md:inline ml-1 font-bold" data-i18n="btnGuide">Panduan</span>
                 </button>
-                <button onclick="toggleDarkMode()" id="darkModeBtn" class="flex items-center justify-center w-9 h-9 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600">
+                <button onclick="toggleDarkMode()" id="darkModeBtn" class="flex items-center justify-center w-9 h-9 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-sm transition shadow-md border-2 border-slate-300 dark:border-slate-500">
                     <i class="fa-solid fa-moon text-slate-600 dark:text-slate-300"></i>
                 </button>
-                <button onclick="toggleLanguage()" class="flex items-center justify-center w-9 h-9 md:w-auto md:px-3 md:py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-sm transition shadow-sm border border-slate-200 dark:border-slate-600">
+                <button onclick="toggleLanguage()" class="flex items-center justify-center w-9 h-9 md:w-auto md:px-3 md:py-1.5 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 font-bold rounded-lg text-sm transition shadow-md border-2 border-slate-300 dark:border-slate-500">
                     <i class="fa-solid fa-globe text-blue-600 dark:text-blue-400"></i> <span id="langDisplay" class="hidden md:inline ml-1">EN</span>
                 </button>
             </div>
@@ -390,9 +398,36 @@
                 <button onclick="downloadList()" class="px-4 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-bold rounded-xl transition flex items-center gap-2 border border-slate-300 dark:border-slate-600 shadow-sm" title="Download file .txt">
                     <i class="fa-solid fa-file-arrow-down text-lg"></i> <span class="hidden md:inline" data-i18n="btnDownload">Download List</span>
                 </button>
-                <button onclick="copyToClipboard()" class="px-5 md:px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition flex items-center gap-2 shadow-lg">
+                <button onclick="openConfirm()" id="btnFinish" class="px-5 md:px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition flex items-center gap-2 shadow-lg">
                     <i class="fa-brands fa-whatsapp text-xl"></i> <span class="hidden md:inline" data-i18n="btnWA">Kirim WA</span><span class="md:hidden" data-i18n="btnWA">Kirim WA</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KONFIRMASI SELESAI MEMILIH -->
+    <div id="confirmModal" class="hidden fixed inset-0 z-[96] bg-slate-950/70 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div id="confirmAsk" class="p-7 text-center">
+                <div class="mx-auto mb-4 w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-3xl"><i class="fa-solid fa-clipboard-check"></i></div>
+                <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2" data-i18n="confirmTitle">Konfirmasi Pilihan Foto</h3>
+                <p id="confirmAskText" class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6"></p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button onclick="closeConfirm()" class="py-3 px-4 rounded-xl border-2 border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-i18n="confirmNo">Masih Ada Perubahan</button>
+                    <button id="confirmYesBtn" onclick="confirmNoChanges()" class="py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg transition" data-i18n="confirmYes">Ya, Tidak Ada Perubahan</button>
+                </div>
+            </div>
+            <div id="confirmDone" class="hidden p-7 text-center">
+                <div class="mx-auto mb-4 w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 flex items-center justify-center text-3xl"><i class="fa-solid fa-circle-check"></i></div>
+                <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2" data-i18n="confirmDoneTitle">Pilihan Anda Sudah Final</h3>
+                <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6" data-i18n="confirmDoneDesc">Silakan kirim daftar foto ke admin lewat WhatsApp agar segera kami proses.</p>
+                <button id="confirmWaBtn" onclick="sendFinalWA()" class="w-full py-3.5 px-4 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg transition flex items-center justify-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-xl"></i> <span id="confirmWaText" data-i18n="confirmSend">Kirim ke WhatsApp Admin</span>
+                </button>
+                <div class="grid grid-cols-2 gap-3 mt-3">
+                    <button onclick="downloadList()" class="py-2.5 px-3 rounded-xl border-2 border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-i18n="btnDownload">Download List</button>
+                    <button onclick="closeConfirm()" class="py-2.5 px-3 rounded-xl border-2 border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-700 transition" data-i18n="confirmClose">Tutup</button>
+                </div>
             </div>
         </div>
     </div>
@@ -483,7 +518,9 @@
             forceLocked: false,    // ditutup manual oleh vendor (status "tutup" di Sheet)
             remote: null,          // mode server: { code, saving, rev, timer, lastCheck }
             remoteSelection: null,
-            remoteApplied: false
+            remoteApplied: false,
+            syncedMap: new Map(),  // keadaan terakhir yang diketahui server (id -> catatan), dasar penggabungan
+            partners: 0
         };
 
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -1072,7 +1109,42 @@
                 appState.selectedMap.set(i.id, { id: i.id, name: i.name, folderName: '' });
                 if (i.note) appState.notes[i.id] = i.note;
             });
+            appState.syncedMap = new Map((sel.items || []).map(i => [i.id, i.note || '']));
+            if (appState.remote) appState.remote.selRev = sel.rev || '';
             saveLocal();
+        }
+
+        // Gabungkan pilihan dari server (mis. hasil kerja pasangan) ke pilihan lokal tanpa menimpa perubahan lokal.
+        // base = keadaan terakhir yang diketahui server; hanya selisih server-vs-base yang dipindahkan.
+        function applyServerSelection(sel) {
+            if (!sel || !Array.isArray(sel.items)) return;
+            const base = appState.syncedMap || new Map();
+            const serverMap = new Map(sel.items.map(i => [i.id, i]));
+            let added = 0, removed = 0, noted = 0;
+            serverMap.forEach((i, id) => {
+                if (!base.has(id)) {
+                    if (!appState.selectedMap.has(id)) { appState.selectedMap.set(id, { id, name: i.name, folderName: '' }); added++; }
+                    if (i.note && !appState.notes[id]) appState.notes[id] = i.note;
+                } else if ((i.note || '') !== (base.get(id) || '') && appState.selectedMap.has(id) && (appState.notes[id] || '') === (base.get(id) || '')) {
+                    if (i.note) appState.notes[id] = i.note; else delete appState.notes[id];
+                    noted++;
+                }
+            });
+            base.forEach((n, id) => {
+                if (!serverMap.has(id) && appState.selectedMap.has(id)) {
+                    appState.selectedMap.delete(id); delete appState.notes[id]; removed++;
+                }
+            });
+            appState.syncedMap = new Map(sel.items.map(i => [i.id, i.note || '']));
+            if (appState.remote) appState.remote.selRev = sel.rev || '';
+            if (added || removed || noted) {
+                saveLocal();
+                if (appState.viewMode === 'selected' && appState.selectedMap.size === 0) appState.viewMode = 'all';
+                updateActionBar(); updateViewModeText();
+                if (appState.viewMode === 'selected') renderGallery(); else updateGalleryVisuals();
+                const msg = added ? t('partnerAdded', { n: added }) : removed ? t('partnerRemoved', { n: removed }) : t('partnerChanged');
+                showAlert(msg, 'success');
+            }
         }
 
         // Dipanggil setelah progres lokal dimuat: server adalah sumber kebenaran,
@@ -1155,6 +1227,10 @@
             appState.remote.syncState = state;
         }
 
+        function baseForServer() {
+            return Array.from((appState.syncedMap || new Map()).entries()).map(([id, note]) => [id, note || '']);
+        }
+
         function remotePayload() {
             return Array.from(appState.selectedMap.values()).map(p => ({ id: p.id, name: p.name, note: appState.notes[p.id] || '' }));
         }
@@ -1178,9 +1254,10 @@
             const revAtStart = r.rev;
             setSyncStatus('saving');
             try {
-                const res = await serverCall('POST', { action: 'save', c: r.code, selected: remotePayload() });
+                const res = await serverCall('POST', { action: 'save', c: r.code, selected: remotePayload(), base: baseForServer() });
                 if (res && res.ok) {
                     if (res.now) appState.timeOffset = res.now - Date.now();
+                    if (res.selection) applyServerSelection(res.selection);
                     if (r.rev === revAtStart) { try { localStorage.removeItem(pendingKey()); } catch (e) {} }
                     const d = new Date(nowMs());
                     setSyncStatus('saved', d.toLocaleTimeString(appState.lang === 'id' ? 'id-ID' : 'en-GB', { hour: '2-digit', minute: '2-digit' }).replace('.', ':'));
@@ -1233,11 +1310,52 @@
             const r = appState.remote;
             if (!r || !hasPending() || isLocked() || !navigator.sendBeacon) return;
             try {
-                navigator.sendBeacon(serverUrl(), new Blob([JSON.stringify({ action: 'save', c: r.code, selected: remotePayload() })], { type: 'text/plain;charset=utf-8' }));
+                navigator.sendBeacon(serverUrl(), new Blob([JSON.stringify({ action: 'save', c: r.code, selected: remotePayload(), base: baseForServer() })], { type: 'text/plain;charset=utf-8' }));
             } catch (e) {}
         }
 
+        // ----- Kehadiran pasangan (link yang sama dibuka di perangkat lain) -----
+        function myDeviceId() {
+            try {
+                let id = sessionStorage.getItem('cp_dev');
+                if (!id) { id = 'd' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); sessionStorage.setItem('cp_dev', id); }
+                return id;
+            } catch (e) { return 'd' + Math.random().toString(36).slice(2, 12); }
+        }
+
+        function setPartners(n) {
+            const prev = appState.partners;
+            appState.partners = n;
+            const chip = document.getElementById('partnerChip');
+            if (chip) {
+                chip.classList.toggle('hidden', n <= 0); chip.classList.toggle('inline-flex', n > 0);
+                chip.title = t('partnerOnline');
+                const tx = document.getElementById('partnerChipText'); if (tx) tx.textContent = t('partnerChip');
+            }
+            if (n > 0 && prev === 0) showAlert(t('partnerOnline'), 'success');
+        }
+
+        async function pingPresence() {
+            const r = appState.remote;
+            if (!r || r.presenceOff || r.pinging || document.hidden) return;
+            r.pinging = true;
+            try {
+                const res = await serverCall('POST', { action: 'presence', c: r.code, id: myDeviceId(), rev: r.selRev || '' }, 10000);
+                if (res && res.ok) {
+                    if (res.now) appState.timeOffset = res.now - Date.now();
+                    setPartners(res.others || 0);
+                    if (res.selection) applyServerSelection(res.selection);
+                } else if (res && res.error === 'unknown_action') {
+                    r.presenceOff = true;   // server lama: fitur ini nonaktif, sisanya tetap jalan
+                }
+            } catch (e) { /* abaikan, coba lagi di denyut berikut */ }
+            finally { r.pinging = false; }
+        }
+
         function startRemoteWatchers() {
+            setTimeout(pingPresence, 1500);
+            setInterval(pingPresence, 20000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) pingPresence(); });
             window.addEventListener('online', () => { if (hasPending()) flushRemoteSave(); });
             setInterval(() => { const r = appState.remote; if (hasPending() && !r.saving) flushRemoteSave(); }, 20000);
             document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshRemoteConfig(); });
@@ -1447,7 +1565,23 @@
                 listDeadline: "Batas Pilih : {date}",
                 listLocked: "Status    : Melewati batas waktu - sisa foto dipilihkan fotografer",
                 gridTip: "Ubah Baris Foto",
-                reshuffleTip: "Tekan ini untuk acak foto"
+                reshuffleTip: "Tekan ini untuk acak foto",
+                btnMyPicks: "Pilihan Fotoku",
+                partnerOnline: "Pasangan Anda sedang memilih foto juga",
+                partnerChip: "Pasangan online",
+                partnerAdded: "Pasangan Anda menambahkan {n} foto ke pilihan",
+                partnerRemoved: "Pasangan Anda menghapus {n} foto dari pilihan",
+                partnerChanged: "Pilihan diperbarui oleh pasangan Anda",
+                confirmTitle: "Konfirmasi Pilihan Foto",
+                confirmAsk: "Anda memilih <b>{n}</b> foto. Apakah sudah tidak ada perubahan?",
+                confirmNo: "Masih Ada Perubahan",
+                confirmYes: "Ya, Tidak Ada Perubahan",
+                confirmSaving: "Menyimpan...",
+                confirmDoneTitle: "Pilihan Anda Sudah Final",
+                confirmDoneDesc: "Silakan kirim daftar foto ke admin lewat WhatsApp agar segera kami proses.",
+                confirmSend: "Kirim ke WhatsApp Admin",
+                confirmCopy: "Salin Daftar Foto",
+                confirmClose: "Tutup"
             },
             en: {
                 subtitle: "Secure Selection Tool",
@@ -1520,7 +1654,23 @@
                 listDeadline: "Deadline  : {date}",
                 listLocked: "Status    : Past deadline - remaining photos chosen by the photographer",
                 gridTip: "Change Grid Rows",
-                reshuffleTip: "Click to reshuffle"
+                reshuffleTip: "Click to reshuffle",
+                btnMyPicks: "My Picks",
+                partnerOnline: "Your partner is choosing photos too",
+                partnerChip: "Partner online",
+                partnerAdded: "Your partner added {n} photo(s) to the selection",
+                partnerRemoved: "Your partner removed {n} photo(s) from the selection",
+                partnerChanged: "Selection updated by your partner",
+                confirmTitle: "Confirm Your Selection",
+                confirmAsk: "You selected <b>{n}</b> photos. Are you done, with no more changes?",
+                confirmNo: "I Still Have Changes",
+                confirmYes: "Yes, No More Changes",
+                confirmSaving: "Saving...",
+                confirmDoneTitle: "Your Selection Is Final",
+                confirmDoneDesc: "Please send the photo list to the admin via WhatsApp so we can process it.",
+                confirmSend: "Send to Admin on WhatsApp",
+                confirmCopy: "Copy Photo List",
+                confirmClose: "Close"
             }
         };
 
@@ -1977,6 +2127,7 @@
         function updateViewModeText() {
             const btn = document.getElementById('viewModeBtn');
             const langData = TRANSLATIONS[appState.lang];
+            updateMyPicksBtn();
             if (appState.viewMode === 'all') {
                 btn.innerHTML = `<i class="fa-solid fa-filter"></i> <span id="btnViewText">${langData.btnViewSel}</span> (${appState.selectedMap.size})`;
                 btn.className = "text-sm bg-slate-800 dark:bg-slate-700 text-white py-2 px-4 rounded-lg font-medium transition flex items-center gap-2 shadow-sm hover:bg-slate-700 dark:hover:bg-slate-600 border border-transparent dark:border-slate-600";
@@ -1985,6 +2136,53 @@
                 btn.className = "text-sm bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition flex items-center gap-2 shadow-sm hover:bg-blue-700 border border-transparent";
             }
         }
+
+        function updateMyPicksBtn() {
+            const b = document.getElementById('myPicksBtn');
+            if (!b) return;
+            b.classList.remove('hidden'); b.classList.add('inline-flex');
+            document.getElementById('myPicksCount').textContent = appState.selectedMap.size;
+            b.classList.toggle('ring-4', appState.viewMode === 'selected');
+            b.classList.toggle('ring-blue-300', appState.viewMode === 'selected');
+        }
+
+        function toggleMyPicks() {
+            toggleViewMode();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ----- Konfirmasi selesai memilih -----
+        function openConfirm() {
+            if (appState.selectedMap.size === 0) return showAlert(TRANSLATIONS[appState.lang].alertEmpty, 'error');
+            document.getElementById('confirmAskText').innerHTML = t('confirmAsk', { n: appState.selectedMap.size });
+            document.getElementById('confirmAsk').classList.remove('hidden');
+            document.getElementById('confirmDone').classList.add('hidden');
+            const m = document.getElementById('confirmModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        }
+
+        function closeConfirm() {
+            const m = document.getElementById('confirmModal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+        }
+
+        async function confirmNoChanges() {
+            const btn = document.getElementById('confirmYesBtn');
+            const r = appState.remote;
+            if (r && !isLocked()) {
+                btn.disabled = true; btn.textContent = t('confirmSaving');
+                clearTimeout(r.timer);
+                for (let i = 0; i < 20 && r.saving; i++) await new Promise(ok => setTimeout(ok, 250));
+                if (hasPending()) await flushRemoteSave();
+                btn.disabled = false; btn.textContent = t('confirmYes');
+            }
+            const hasWa = !!((typeof CONFIG_APP !== 'undefined' && CONFIG_APP.whatsappAdmin) ? CONFIG_APP.whatsappAdmin : '');
+            document.getElementById('confirmWaText').textContent = hasWa ? t('confirmSend') : t('confirmCopy');
+            document.getElementById('confirmAsk').classList.add('hidden');
+            document.getElementById('confirmDone').classList.remove('hidden');
+        }
+
+        function sendFinalWA() { copyToClipboard(); }
 
         function toggleViewMode() {
             if (appState.viewMode === 'all') {
@@ -2180,6 +2378,7 @@
             const count = appState.selectedMap.size;
             const bar = document.getElementById('actionBar');
             document.getElementById('selectedCount').textContent = count;
+            updateMyPicksBtn();
             
             if (appState.kuota !== null) {
                 const percentage = Math.min((count / appState.kuota) * 100, 100);

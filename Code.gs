@@ -29,7 +29,7 @@ const DEFAULT_ADMIN_KEY = 'GANTI-DENGAN-KUNCI-RAHASIA';   // jangan diubah (pena
 // ====== VERSI SERVER ======
 // Naik hanya jika rilis baru membutuhkan perubahan di Code.gs. Website (adminAuth.js,
 // REQUIRED_SERVER_VERSION) membandingkan angka ini dan menampilkan peringatan update.
-const SERVER_VERSION = 1;
+const SERVER_VERSION = 2;
 
 // ====== PENGATURAN ======
 const SHEET_LINKS = 'Links';
@@ -78,6 +78,7 @@ function handle_(params, body) {
     switch (action) {
       case 'get':        return json_(actionGet_(src));
       case 'save':       return json_(actionSave_(src));
+      case 'presence':   return json_(actionPresence_(src));
       case 'createLink': return json_(actionCreateLink_(src));
       case 'updateLink': return json_(actionUpdateLink_(src));
       case 'list':       return json_(actionList_(src));
@@ -317,6 +318,9 @@ function findSelectionRow_(code) {
   return { sheet: sh, row: null };
 }
 
+// Penanda isi pilihan (berubah jika isinya berubah). Dipakai membandingkan tanpa bergantung pada jam.
+function revOf_(json) { return sha_(json).slice(0, 12); }
+
 function readSelection_(code) {
   const f = findSelectionRow_(code);
   if (!f.row) return null;
@@ -325,7 +329,8 @@ function readSelection_(code) {
   try { arr = JSON.parse(vals[4] || '[]'); } catch (e) { arr = []; }
   return {
     items: arr.map(function (a) { return { id: a[0], name: a[1], note: a[2] || '' }; }),
-    updatedAt: toMs_(vals[5])
+    updatedAt: toMs_(vals[5]),
+    rev: revOf_(String(vals[4] || '[]'))
   };
 }
 
@@ -346,6 +351,37 @@ function actionGet_(src) {
   };
 }
 
+// Menggabungkan perubahan satu perangkat ke pilihan yang sudah ada di server (3 arah):
+//   current = pilihan di server sekarang, incoming = pilihan di perangkat, base = pilihan terakhir yang
+//   diketahui perangkat itu ([[id, catatan], ...]). Yang ditambah/dihapus perangkat ini diterapkan ke
+//   current, sehingga pilihan pasangan (perangkat lain) tidak tertimpa.
+function mergeSelection_(current, incoming, base) {
+  const baseMap = {};
+  base.forEach(function (b) { baseMap[String(b[0])] = String(b[1] || ''); });
+  const inMap = {};
+  incoming.forEach(function (i) { inMap[i[0]] = i; });
+  const out = [];
+  const seen = {};
+  current.forEach(function (c) {
+    const known = Object.prototype.hasOwnProperty.call(baseMap, c[0]);
+    const inc = inMap[c[0]];
+    if (known && !inc) return;                       // dihapus oleh perangkat ini
+    let note = c[2] || '';
+    if (inc) {
+      if (known) { if (String(inc[2] || '') !== baseMap[c[0]]) note = inc[2] || ''; }   // catatan diubah di perangkat ini
+      else if (inc[2]) note = inc[2];                // ditambahkan di kedua perangkat
+    }
+    out.push([c[0], c[1], note]);
+    seen[c[0]] = true;
+  });
+  incoming.forEach(function (i) {
+    if (seen[i[0]]) return;
+    if (!Object.prototype.hasOwnProperty.call(baseMap, i[0])) out.push(i);   // baru ditambahkan perangkat ini
+    // jika sudah diketahui perangkat ini tetapi hilang di server: pasangan menghapusnya, hapusan itu dihormati
+  });
+  return out;
+}
+
 function actionSave_(src) {
   const code = clean_(src.c);
   const found = findLink_(code);
@@ -360,34 +396,80 @@ function actionSave_(src) {
   if (raw.length > MAX_ITEMS) return { ok: false, error: 'too_many', now: now };
 
   const seen = {};
-  const items = [];
+  const incoming = [];
   for (let i = 0; i < raw.length; i++) {
     const it = raw[i] || {};
     const id = String(it.id || '');
     if (!/^[A-Za-z0-9_-]{10,80}$/.test(id) || seen[id]) continue;
     seen[id] = true;
-    items.push([id, String(it.name || '').slice(0, 100), String(it.note || '').slice(0, 400)]);
+    incoming.push([id, String(it.name || '').slice(0, 100), String(it.note || '').slice(0, 400)]);
   }
-  if (link.kuota !== null && items.length > link.kuota) return { ok: false, error: 'quota', now: now, kuota: link.kuota };
-
-  const json = JSON.stringify(items);
-  if (json.length > 48000) return { ok: false, error: 'too_large', now: now };
-
-  const daftar = items.map(function (a, i) { return (i + 1) + '. ' + a[1] + (a[2] ? '  [catatan: ' + a[2] + ']' : ''); }).join('\n').slice(0, 45000);
+  // base ada = mode gabung (klien baru); tanpa base = timpa seluruhnya (klien lama)
+  const mergeMode = Array.isArray(src.base);
+  const base = mergeMode ? src.base.slice(0, MAX_ITEMS).map(function (b) { return Array.isArray(b) ? [String(b[0] || ''), String(b[1] || '')] : [String(b || ''), '']; }) : [];
 
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
+    let items = incoming;
+    if (mergeMode) {
+      const cur = readSelection_(code);
+      const current = cur ? cur.items.map(function (x) { return [x.id, x.name, x.note || '']; }) : [];
+      items = mergeSelection_(current, incoming, base);
+    }
+    if (items.length > MAX_ITEMS) return { ok: false, error: 'too_many', now: now };
+    if (link.kuota !== null && items.length > link.kuota) return { ok: false, error: 'quota', now: now, kuota: link.kuota };
+    const json = JSON.stringify(items);
+    if (json.length > 48000) return { ok: false, error: 'too_large', now: now };
+    const daftar = items.map(function (a, i) { return (i + 1) + '. ' + a[1] + (a[2] ? '  [catatan: ' + a[2] + ']' : ''); }).join('\n').slice(0, 45000);
+
     const f = findSelectionRow_(code);
     const rowValues = [[code, link.name, items.length, daftar, json, new Date()]];
     let row = f.row;
     if (!row) row = f.sheet.getLastRow() + 1;
     f.sheet.getRange(row, 1, 1, SEL_HEADERS.length).setValues(rowValues);
     f.sheet.getRange(row, 6).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+    const updatedAt = Date.now();
+    return {
+      ok: true, now: updatedAt, updatedAt: updatedAt, count: items.length,
+      rev: revOf_(json),
+      selection: { items: items.map(function (a) { return { id: a[0], name: a[1], note: a[2] || '' }; }), updatedAt: updatedAt, rev: revOf_(json) }
+    };
   } finally {
     lock.releaseLock();
   }
-  return { ok: true, now: Date.now(), updatedAt: Date.now(), count: items.length };
+}
+
+// Kehadiran: siapa lagi yang sedang membuka link yang sama (mis. pasangan klien).
+// Perangkat mengirim denyut tiap ~20 detik; dianggap aktif jika terlihat < 60 detik terakhir.
+// Jika isi pilihan di server berbeda dari yang diketahui perangkat (rev), pilihan ikut dikirim.
+const PRESENCE_ACTIVE_MS = 60 * 1000;
+function actionPresence_(src) {
+  const code = clean_(src.c);
+  const id = String(src.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
+  if (!code || !id) return { ok: false, error: 'bad_request' };
+  if (!findLink_(code)) return { ok: false, error: 'not_found' };
+  const now = Date.now();
+  const cache = CacheService.getScriptCache();
+  const key = 'pres_' + code;
+  let others = 0;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    let map = {};
+    try { map = JSON.parse(cache.get(key) || '{}'); } catch (e) { map = {}; }
+    map[id] = now;
+    Object.keys(map).forEach(function (k) { if (now - map[k] > PRESENCE_ACTIVE_MS * 2) delete map[k]; });
+    cache.put(key, JSON.stringify(map), 300);
+    Object.keys(map).forEach(function (k) { if (k !== id && now - map[k] <= PRESENCE_ACTIVE_MS) others++; });
+  } finally {
+    lock.releaseLock();
+  }
+  const out = { ok: true, now: now, others: others };
+  const sel = readSelection_(code);
+  out.rev = sel ? sel.rev : '';
+  if (sel && String(src.rev || '') !== sel.rev) out.selection = sel;
+  return out;
 }
 
 // ---------------------------------------------------------------------

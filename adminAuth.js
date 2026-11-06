@@ -11,7 +11,7 @@
     const URL_KEY = 'cpServerUrl';
     // Versi Code.gs minimum yang dibutuhkan website ini. Naikkan angka ini (bersama SERVER_VERSION
     // di Code.gs) hanya saat rilis baru membutuhkan perubahan di server.
-    const REQUIRED_SERVER_VERSION = 1;
+    const REQUIRED_SERVER_VERSION = 2;
     const LOGIN_PAGE = 'login.html';
     const ALLOWED_NEXT = ['generatorLink.html', 'pengaturanStudio.html'];
     const cfg = () => (typeof CONFIG_APP !== 'undefined' ? CONFIG_APP : {});
@@ -113,8 +113,12 @@
                 d.className = 'w-full max-w-xl bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl p-4 text-xs leading-relaxed shadow-sm';
                 d.innerHTML = '<p class="font-bold mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Server perlu diperbarui</p>' +
                     'Kode server (Code.gs) Anda versi ' + version + ', sedangkan aplikasi ini butuh versi ' + REQUIRED_SERVER_VERSION + '. ' +
-                    'Beberapa fitur belum berfungsi sampai server diperbarui: buka Apps Script, tempel isi <span class="font-mono">Code.gs</span> terbaru (isi lagi ADMIN_KEY), lalu <b>Deploy &gt; Manage deployments &gt; Edit &gt; New version</b>. Data dan link klien tidak hilang.';
+                    'Beberapa fitur belum berfungsi sampai server diperbarui: buka Apps Script, tempel isi <span class="font-mono">Code.gs</span> terbaru (isi lagi ADMIN_KEY), lalu <b>Deploy &gt; Manage deployments &gt; Edit &gt; New version</b>. Data dan link klien tidak hilang.' +
+                    '<p class="mt-2 text-[11px] text-amber-800/80 break-all">Detail teknis: server yang dicek <span class="font-mono" id="verUrl"></span><br>Jawaban server: <span class="font-mono" id="verRaw"></span></p>';
                 document.body.insertBefore(d, document.body.firstChild);
+                const u = serverUrl();
+                document.getElementById('verUrl').textContent = u.length > 60 ? u.slice(0, 32) + '...' + u.slice(-22) : u;
+                document.getElementById('verRaw').textContent = JSON.stringify(r).slice(0, 200);
             }
             return { version, required: REQUIRED_SERVER_VERSION, outdated };
         } catch (e) { return { version: null, required: REQUIRED_SERVER_VERSION, outdated: false }; }
