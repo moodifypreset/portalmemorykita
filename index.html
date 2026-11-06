@@ -363,6 +363,9 @@
     </footer>
 
     <div id="actionBar" class="fixed bottom-0 left-0 w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-700 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.5)] transform translate-y-full transition-transform duration-300 z-50">
+        <div id="syncRow" class="hidden max-w-6xl mx-auto px-4 md:px-8 pt-2">
+            <p id="syncStatus" class="text-[11px] font-medium text-slate-500 dark:text-slate-400 text-right min-h-[1rem]"></p>
+        </div>
         <div id="quotaContainer" class="hidden w-full px-4 md:px-8 pt-3 pb-1 max-w-6xl mx-auto border-b border-slate-100 dark:border-slate-700">
             <div class="flex justify-between items-end mb-1.5">
                 <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider" data-i18n="quotaFooter">Kuota Paket Anda</span>
@@ -473,7 +476,11 @@
             deadline: null,        // epoch ms batas waktu memilih (null = tanpa batas)
             timeOffset: 0,         // selisih jam server - jam perangkat (ms)
             lockedNotified: false,
-            heroReady: false
+            heroReady: false,
+            forceLocked: false,    // ditutup manual oleh vendor (status "tutup" di Sheet)
+            remote: null,          // mode server: { code, saving, rev, timer, lastCheck }
+            remoteSelection: null,
+            remoteApplied: false
         };
 
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -737,10 +744,11 @@
         // BATAS WAKTU MEMILIH FOTO
         // =====================================================================
         const nowMs = () => Date.now() + appState.timeOffset;
-        const isLocked = () => appState.deadline !== null && nowMs() >= appState.deadline;
+        const isLocked = () => appState.forceLocked || (appState.deadline !== null && nowMs() >= appState.deadline);
 
         // Sinkron jam dengan server (header Date), agar mengubah jam perangkat tidak bisa memperpanjang waktu
         async function syncServerTime() {
+            if (appState.remote) return;   // mode server: jam server sudah dipakai langsung dari respons Sheet
             try {
                 const t0 = Date.now();
                 const res = await fetch(location.pathname || '/', { method: 'HEAD', cache: 'no-store' });
@@ -785,7 +793,7 @@
         function updateDeadlineUI() {
             if (appState.deadline === null) return;
             const remaining = appState.deadline - nowMs();
-            const locked = remaining <= 0;
+            const locked = isLocked();
             const heroChip = document.getElementById('heroDeadlineChip');
             const toolbar = document.getElementById('toolbarDeadline');
             const icon = document.querySelector('#heroDeadlineIcon i');
@@ -842,6 +850,271 @@
             if (!isLocked()) return false;
             showAlert(t('alertLocked'), 'error');
             return true;
+        }
+
+        // =====================================================================
+        // MODE SERVER (Google Apps Script + Google Sheet)
+        // Link pendek ?c=KODE. Kuota, batas waktu, folder, dan pilihan klien
+        // disimpan di Sheet. Batas waktu dicek memakai jam server.
+        // =====================================================================
+        const serverUrl = () => (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.urlServer) ? String(CONFIG_APP.urlServer).trim() : '';
+        const cfgCacheKey = (c) => 'cp_cfg_v1_' + c;
+        const pendingKey = () => 'cp_pending_' + (appState.remote ? appState.remote.code : '');
+        const hasPending = () => { try { return !!appState.remote && localStorage.getItem(pendingKey()) === '1'; } catch (e) { return false; } };
+
+        async function serverCall(method, payload, timeoutMs = 20000) {
+            const base = serverUrl();
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+            try {
+                let res;
+                if (method === 'GET') {
+                    const qs = new URLSearchParams(payload).toString();
+                    res = await fetch(base + (base.includes('?') ? '&' : '?') + qs, { signal: ctrl.signal, cache: 'no-store' });
+                } else {
+                    // text/plain = "simple request": tidak memicu preflight CORS yang tidak didukung Apps Script
+                    res = await fetch(base, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctrl.signal });
+                }
+                return await res.json();
+            } finally { clearTimeout(timer); }
+        }
+
+        async function loadRemoteConfig(code) {
+            const t0 = Date.now();
+            const data = await serverCall('GET', { action: 'get', c: code });
+            const t1 = Date.now();
+            if (!data || !data.ok) {
+                const err = new Error((data && data.error) || 'server');
+                err.serverCode = data && data.error;
+                throw err;
+            }
+            if (data.now) appState.timeOffset = data.now - Math.round((t0 + t1) / 2);   // jam server = acuan
+            try { localStorage.setItem(cfgCacheKey(code), JSON.stringify({ link: data.link, selection: data.selection })); } catch (e) {}
+            return data;
+        }
+
+        function readCfgCache(code) {
+            try { const raw = localStorage.getItem(cfgCacheKey(code)); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+        }
+
+        function setupQuotaUI() {
+            const has = appState.kuota !== null;
+            const qc = document.getElementById('quotaContainer');
+            const gi = document.getElementById('greetingQuotaInfo');
+            qc.classList.toggle('hidden', !has); qc.classList.toggle('block', has);
+            gi.classList.toggle('hidden', !has); gi.classList.toggle('flex', has);
+            if (has) document.getElementById('greetingQuotaLimit').textContent = appState.kuota;
+        }
+
+        function unlockUI() {
+            document.body.classList.remove('selection-locked');
+            document.getElementById('lockedBanner').classList.add('hidden');
+            appState.lockedNotified = false;
+        }
+
+        function applyRemoteLink(link) {
+            appState.clientName = link.name || '';
+            document.getElementById('displayClientName').textContent = appState.clientName || 'Kakak';
+            appState.kuota = link.kuota || null;
+            setupQuotaUI();
+            appState.deadline = link.deadline || null;
+            appState.forceLocked = !!link.closed;
+
+            if (!appState.remoteApplied) {   // tampilan watermark & proteksi hanya ditetapkan saat awal
+                appState.remoteApplied = true;
+                appState.wmMode = !!link.wm;
+                appState.protMode = !!link.prot;
+                initProtection();
+            }
+
+            if (appState.deadline === null) {
+                const hc = document.getElementById('heroDeadlineChip'), tb = document.getElementById('toolbarDeadline');
+                hc.classList.add('hidden'); hc.classList.remove('flex');
+                tb.classList.add('hidden'); tb.classList.remove('inline-flex');
+            }
+
+            if (isLocked()) {
+                updateDeadlineUI();
+                applyLockedState();
+            } else {
+                unlockUI();
+                startDeadlineTimer();
+            }
+        }
+
+        function applyRemoteSelectionData(sel) {
+            appState.selectedMap = new Map();
+            appState.notes = {};
+            (sel.items || []).forEach(i => {
+                appState.selectedMap.set(i.id, { id: i.id, name: i.name, folderName: '' });
+                if (i.note) appState.notes[i.id] = i.note;
+            });
+            saveLocal();
+        }
+
+        // Dipanggil setelah progres lokal dimuat: server adalah sumber kebenaran,
+        // kecuali ada perubahan lokal yang belum terkirim (mis. saat offline).
+        function mergeRemoteSelection() {
+            if (!appState.remote) return;
+            const sel = appState.remoteSelection;
+            if (sel && (!hasPending() || isLocked())) {
+                applyRemoteSelectionData(sel);
+                try { localStorage.removeItem(pendingKey()); } catch (e) {}
+                if (appState.selectedMap.size > 0) setTimeout(() => updateActionBar(), 300);
+            } else if (!isLocked() && (hasPending() || (!sel && appState.selectedMap.size > 0))) {
+                scheduleRemoteSave(600);
+            }
+            updateViewModeText();
+        }
+
+        function showInvalidLink(message) {
+            document.getElementById('heroSection').classList.add('hidden');
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('flex');
+            document.getElementById('welcomeSection').classList.remove('hidden');
+            const waNum = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.whatsappAdmin) ? CONFIG_APP.whatsappAdmin : '';
+            if (waNum) {
+                const waBtn = document.getElementById('welcomeWaBtn');
+                waBtn.href = `https://wa.me/${waNum}`;
+                waBtn.classList.remove('hidden');
+            }
+            showAlert(message, 'error');
+        }
+
+        async function initRemote(code) {
+            appState.remote = { code, saving: false, needResave: false, rev: 0, timer: null, lastCheck: Date.now() };
+            document.getElementById('heroSection').classList.remove('hidden');
+            document.getElementById('inputSection').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('loadingState').classList.add('flex');
+
+            if (!serverUrl()) return showInvalidLink(t('errServerNotSet'));
+            if (!code) return showInvalidLink(t('errLinkInvalid'));
+
+            let data, offline = false;
+            try {
+                data = await loadRemoteConfig(code);
+            } catch (e) {
+                if (e.serverCode === 'not_found') return showInvalidLink(t('errLinkInvalid'));
+                const cached = readCfgCache(code);
+                if (!cached) return showInvalidLink(t('errLinkLoad'));
+                data = cached; offline = true;   // server tidak terjangkau: pakai salinan terakhir
+            }
+
+            applyRemoteLink(data.link);
+            appState.remoteSelection = data.selection || null;
+            document.getElementById('driveLink').value = `https://drive.google.com/drive/folders/${data.link.folderId}`;
+            document.getElementById('syncRow').classList.remove('hidden');
+            setSyncStatus(offline ? 'offline' : 'idle');
+            startRemoteWatchers();
+            applyTranslations();
+            loadFromDrive();
+        }
+
+        // ----- Sinkron pilihan ke server -----
+        function setSyncStatus(state, extra) {
+            const el = document.getElementById('syncStatus');
+            if (!el || !appState.remote) return;
+            const map = {
+                idle: ['', ''],
+                pending: ['fa-regular fa-clock', t('syncPending')],
+                saving: ['fa-solid fa-circle-notch fa-spin', t('syncSaving')],
+                saved: ['fa-solid fa-cloud-arrow-up text-green-500', t('syncSaved', { time: extra || '' })],
+                offline: ['fa-solid fa-wifi text-amber-500', t('syncOffline')],
+                error: ['fa-solid fa-triangle-exclamation text-amber-500', t('syncError')]
+            };
+            const [icon, text] = map[state] || map.idle;
+            el.innerHTML = text ? `<i class="${icon} mr-1"></i>${escapeHtml(text)}` : '';
+            appState.remote.syncState = state;
+        }
+
+        function remotePayload() {
+            return Array.from(appState.selectedMap.values()).map(p => ({ id: p.id, name: p.name, note: appState.notes[p.id] || '' }));
+        }
+
+        function scheduleRemoteSave(delay = 1500) {
+            const r = appState.remote;
+            if (!r || isLocked()) return;
+            r.rev++;
+            try { localStorage.setItem(pendingKey(), '1'); } catch (e) {}
+            setSyncStatus('pending');
+            clearTimeout(r.timer);
+            r.timer = setTimeout(flushRemoteSave, delay);
+        }
+
+        async function flushRemoteSave() {
+            const r = appState.remote;
+            if (!r || !hasPending()) return;
+            if (isLocked()) { try { localStorage.removeItem(pendingKey()); } catch (e) {} return; }
+            if (r.saving) { r.needResave = true; return; }
+            r.saving = true;
+            const revAtStart = r.rev;
+            setSyncStatus('saving');
+            try {
+                const res = await serverCall('POST', { action: 'save', c: r.code, selected: remotePayload() });
+                if (res && res.ok) {
+                    if (res.now) appState.timeOffset = res.now - Date.now();
+                    if (r.rev === revAtStart) { try { localStorage.removeItem(pendingKey()); } catch (e) {} }
+                    const d = new Date(nowMs());
+                    setSyncStatus('saved', d.toLocaleTimeString(appState.lang === 'id' ? 'id-ID' : 'en-GB', { hour: '2-digit', minute: '2-digit' }).replace('.', ':'));
+                } else if (res && (res.error === 'locked' || res.error === 'closed' || res.error === 'quota')) {
+                    await handleServerRejected(res);
+                } else {
+                    throw new Error((res && res.error) || 'save');
+                }
+            } catch (e) {
+                setSyncStatus(navigator.onLine === false ? 'offline' : 'error');
+                clearTimeout(r.timer);
+                r.timer = setTimeout(flushRemoteSave, 15000);   // coba lagi otomatis
+            } finally {
+                r.saving = false;
+                if (r.needResave) { r.needResave = false; scheduleRemoteSave(300); }
+            }
+        }
+
+        // Server menolak (batas waktu lewat / ditutup vendor / kuota diubah): ikuti keputusan server
+        async function handleServerRejected(res) {
+            try { localStorage.removeItem(pendingKey()); } catch (e) {}
+            if (res.now) appState.timeOffset = res.now - Date.now();
+            if (res.error === 'closed') appState.forceLocked = true;
+            else if (res.error === 'locked') appState.deadline = res.deadline || (nowMs() - 1);
+            try {
+                const data = await loadRemoteConfig(appState.remote.code);
+                applyRemoteLink(data.link);
+                if (data.selection) applyRemoteSelectionData(data.selection);
+            } catch (e) {
+                applyRemoteLink({ name: appState.clientName, kuota: appState.kuota, deadline: appState.deadline, closed: appState.forceLocked });
+            }
+            setSyncStatus('idle');
+            showAlert(t('alertLocked'), 'error');
+            if (appState.viewMode === 'selected' && appState.selectedMap.size === 0) appState.viewMode = 'all';
+            updateActionBar(); updateViewModeText(); renderGallery();
+        }
+
+        async function refreshRemoteConfig() {
+            const r = appState.remote;
+            if (!r || Date.now() - r.lastCheck < 20000) return;
+            r.lastCheck = Date.now();
+            try {
+                const data = await loadRemoteConfig(r.code);
+                applyRemoteLink(data.link);
+                updateActionBar();
+            } catch (e) { /* abaikan */ }
+        }
+
+        function beaconSave() {
+            const r = appState.remote;
+            if (!r || !hasPending() || isLocked() || !navigator.sendBeacon) return;
+            try {
+                navigator.sendBeacon(serverUrl(), new Blob([JSON.stringify({ action: 'save', c: r.code, selected: remotePayload() })], { type: 'text/plain;charset=utf-8' }));
+            } catch (e) {}
+        }
+
+        function startRemoteWatchers() {
+            window.addEventListener('online', () => { if (hasPending()) flushRemoteSave(); });
+            setInterval(() => { const r = appState.remote; if (hasPending() && !r.saving) flushRemoteSave(); }, 20000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshRemoteConfig(); });
+            window.addEventListener('pagehide', beaconSave);
         }
 
         // =====================================================================
@@ -924,8 +1197,10 @@
             return layer;
         }
 
+        let protInited = false;
         function initProtection() {
-            if (!appState.protMode) return;
+            if (!appState.protMode || protInited) return;
+            protInited = true;
 
             document.body.classList.add('protected-mode');
 
@@ -1006,6 +1281,14 @@
                 alertEmpty: "Belum ada foto yang dipilih.",
                 alertCopy: "List foto disalin! Silahkan paste di WhatsApp.",
                 deadlineLabel: "Batas Memilih Foto",
+                syncPending: "Menunggu disimpan...",
+                syncSaving: "Menyimpan...",
+                syncSaved: "Tersimpan {time}",
+                syncOffline: "Offline - akan dikirim otomatis saat tersambung",
+                syncError: "Gagal menyimpan, mencoba lagi...",
+                errLinkInvalid: "Link ini tidak valid atau sudah dihapus. Silakan minta link baru ke fotografer.",
+                errLinkLoad: "Gagal menghubungi server. Periksa internet Anda lalu muat ulang halaman.",
+                errServerNotSet: "Server belum diatur. Hubungi fotografer.",
                 deadlineLeft: "{time} lagi",
                 deadlineEnded: "Batas waktu berakhir",
                 lockedTitle: "Batas waktu memilih sudah berakhir",
@@ -1071,6 +1354,14 @@
                 alertEmpty: "No photos selected yet.",
                 alertCopy: "List copied! Please paste it in WhatsApp.",
                 deadlineLabel: "Selection Deadline",
+                syncPending: "Waiting to save...",
+                syncSaving: "Saving...",
+                syncSaved: "Saved {time}",
+                syncOffline: "Offline - will be sent automatically when connected",
+                syncError: "Save failed, retrying...",
+                errLinkInvalid: "This link is invalid or has been removed. Please ask your photographer for a new link.",
+                errLinkLoad: "Could not reach the server. Check your connection and reload the page.",
+                errServerNotSet: "Server is not configured. Please contact your photographer.",
                 deadlineLeft: "{time} left",
                 deadlineEnded: "Deadline passed",
                 lockedTitle: "The selection deadline has passed",
@@ -1162,6 +1453,13 @@
             const urlKuota = urlParams.get('k');
             const autoId = urlParams.get('i');
             const urlDeadline = urlParams.get('d');
+            const urlCode = urlParams.get('c');
+
+            if (urlCode) {
+                // MODE SERVER: link pendek ?c=KODE, kuota/batas waktu/folder diambil dari Google Sheet
+                initRemote(urlCode.toUpperCase().replace(/[^A-Z0-9]/g, ''));
+            } else {
+            // MODE LAMA (tanpa server): semua pengaturan ada di URL
             appState.wmMode = urlParams.get('wm') === '1';
             appState.protMode = urlParams.get('prot') === '1';
             initProtection();
@@ -1218,6 +1516,7 @@
                     waBtn.classList.remove('hidden');
                 }
             }
+            }   // akhir mode lama
 
             const lightboxEl = document.getElementById('lightbox');
             lightboxEl.addEventListener('touchstart', e => {
@@ -1308,17 +1607,26 @@
             }
         }
 
-        function saveProgress() {
+        function progressKey(rootFolderId) {
+            return `client_portal_save_${rootFolderId}` + (appState.remote ? `_${appState.remote.code}` : '');
+        }
+
+        function saveLocal() {
             if (!appState.rootFolderId) return;
             const dataToSave = { 
                 selected: Array.from(appState.selectedMap.entries()), 
                 notes: appState.notes 
             };
-            localStorage.setItem(`client_portal_save_${appState.rootFolderId}`, JSON.stringify(dataToSave));
+            try { localStorage.setItem(progressKey(appState.rootFolderId), JSON.stringify(dataToSave)); } catch (e) {}
+        }
+
+        function saveProgress() {
+            saveLocal();
+            scheduleRemoteSave();   // mode server: kirim ke Sheet (diabaikan di mode lama)
         }
 
         function loadProgress(rootFolderId) {
-            const savedData = localStorage.getItem(`client_portal_save_${rootFolderId}`);
+            const savedData = localStorage.getItem(progressKey(rootFolderId));
             if (savedData) {
                 try {
                     const data = JSON.parse(savedData);
@@ -1375,6 +1683,7 @@
                 appState.rootFolderId = targetFolderId;
                 appState.folderHistory = [];
                 loadProgress(appState.rootFolderId);
+                mergeRemoteSelection();
                 document.getElementById('inputSection').classList.add('hidden');
             } else {
                 if (!isNavigatingBack) {

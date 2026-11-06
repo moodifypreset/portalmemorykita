@@ -29,6 +29,13 @@
         <div class="p-6 md:p-8 space-y-5">
             <div class="hidden"><input type="text" id="baseUrl"></div>
 
+            <!-- MODE SERVER (tampil otomatis jika urlServer di pengaturan.js diisi) -->
+            <div id="serverBox" class="hidden bg-emerald-50 p-4 rounded-xl border border-emerald-200 space-y-2">
+                <label class="block text-xs font-bold text-emerald-800"><i class="fa-solid fa-cloud mr-1"></i> Mode Server Aktif - Kunci Admin</label>
+                <input type="password" id="adminKey" autocomplete="off" placeholder="Kunci rahasia yang Anda isi di Code.gs" class="w-full px-3 py-2.5 bg-white border border-emerald-300 rounded-lg focus:border-emerald-600 outline-none transition text-sm">
+                <p class="text-[11px] text-emerald-700 leading-relaxed">Link klien menjadi pendek dan pilihan foto tersimpan otomatis di Google Sheet. Batas waktu dicek oleh server. Kunci disimpan hanya di browser ini.</p>
+            </div>
+
             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -112,7 +119,7 @@
                 </div>
             </div>
 
-            <button onclick="generateLink()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
+            <button id="btnGenerate" onclick="generateLink()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> Buat Link Terenkripsi
             </button>
 
@@ -131,6 +138,22 @@
         </div>
     </div>
 
+    <!-- DAFTAR LINK KLIEN (mode server) -->
+    <div id="listBox" class="hidden bg-white max-w-xl w-full rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 flex items-center justify-between border-b border-slate-200">
+            <div>
+                <h2 class="font-bold text-slate-800">Link Klien & Pilihan</h2>
+                <p class="text-[11px] text-slate-500">Lihat siapa yang sudah memilih, perpanjang atau tutup link.</p>
+            </div>
+            <button onclick="loadLinkList()" id="btnLoadList" class="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg transition flex items-center gap-2">
+                <i class="fa-solid fa-rotate-right"></i> Muat Daftar
+            </button>
+        </div>
+        <div id="linkList" class="divide-y divide-slate-100 max-h-[28rem] overflow-y-auto">
+            <p class="p-6 text-sm text-slate-400 text-center">Klik "Muat Daftar" untuk menampilkan link yang pernah dibuat.</p>
+        </div>
+    </div>
+
     <!-- Alert Notifikasi -->
     <div id="customAlert" class="fixed top-4 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 transition-all duration-300 transform -translate-y-32 opacity-0">
         <i id="alertIcon" class="fa-solid fa-circle-check text-green-400"></i>
@@ -144,6 +167,12 @@
             let currentUrl = window.location.href.split('?')[0].split('#')[0];
             let portalUrl = currentUrl.includes("generatorLink.html") ? currentUrl.replace("generatorLink.html", "") : currentUrl.substring(0, currentUrl.lastIndexOf("/") + 1);
             document.getElementById('baseUrl').value = portalUrl;
+
+            if (serverUrl()) {
+                document.getElementById('serverBox').classList.remove('hidden');
+                document.getElementById('listBox').classList.remove('hidden');
+                document.getElementById('adminKey').value = localStorage.getItem('cpAdminKey') || '';
+            }
 
             const savedTemplate = localStorage.getItem('customWaTemplate');
             if (savedTemplate) {
@@ -230,7 +259,37 @@
             }
         }
 
-        function generateLink() {
+        // ===== SERVER =====
+        const serverUrl = () => (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.urlServer) ? String(CONFIG_APP.urlServer).trim() : '';
+        const escapeHtml = (v) => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        async function serverPost(body) {
+            const res = await fetch(serverUrl(), { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+            return await res.json();
+        }
+
+        function serverErrorText(code) {
+            const map = {
+                unauthorized: 'Kunci Admin salah.',
+                admin_key_not_set: 'ADMIN_KEY di Code.gs belum diganti dari nilai bawaan.',
+                bad_folder: 'Link / ID folder Google Drive tidak valid.',
+                not_found: 'Link tidak ditemukan di Sheet.'
+            };
+            return map[code] || ('Server menolak permintaan (' + (code || 'tidak diketahui') + ').');
+        }
+
+        function buildLegacyParams(clientName, kuota, deadlineMs, folderId) {
+            let params = [];
+            if (clientName !== "") params.push(`n=${encodeURIComponent(clientName.replace(/\s+/g, '-'))}`);
+            if (kuota && parseInt(kuota) > 0) params.push(`k=${btoa(kuota.toString()).replace(/=/g, '')}`);
+            if (deadlineMs !== null) params.push(`d=${btoa(String(Math.floor(deadlineMs / 1000))).replace(/=/g, '')}`);
+            if (document.getElementById('protCheck').checked) params.push('prot=1');
+            if (document.getElementById('wmCheck').checked) params.push('wm=1');
+            params.push(`i=${folderId}`);
+            return params.join('&');
+        }
+
+        async function generateLink() {
             const baseUrl = document.getElementById('baseUrl').value.trim();
             const clientName = document.getElementById('clientName').value.trim();
             const clientPhone = document.getElementById('clientPhone').value.trim();
@@ -242,31 +301,37 @@
             const folderId = extractFolderId(driveLink);
             if (!folderId) return showAlert('Link Google Drive tidak valid!', true);
 
-            let finalUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-            let params = [];
-            
-            if (clientName !== "") {
-                const cleanName = clientName.replace(/\s+/g, '-');
-                params.push(`n=${encodeURIComponent(cleanName)}`);
-            }
-
-            if (kuota && parseInt(kuota) > 0) {
-                const hashedKuota = btoa(kuota.toString()).replace(/=/g, '');
-                params.push(`k=${hashedKuota}`);
-            }
-            
             const deadlineMs = getDeadlineMs();
-            if (deadlineMs !== null) {
-                if (deadlineMs <= Date.now() && !confirm('Batas waktu yang dipilih sudah lewat, klien tidak akan bisa memilih foto sama sekali. Tetap buat link?')) return;
-                const hashedDeadline = btoa(String(Math.floor(deadlineMs / 1000))).replace(/=/g, '');
-                params.push(`d=${hashedDeadline}`);
+            if (deadlineMs !== null && deadlineMs <= Date.now() && !confirm('Batas waktu yang dipilih sudah lewat, klien tidak akan bisa memilih foto sama sekali. Tetap buat link?')) return;
+
+            let finalUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+            let useLegacy = !serverUrl();
+
+            if (!useLegacy) {
+                const adminKey = document.getElementById('adminKey').value.trim();
+                if (!adminKey) return showAlert('Isi Kunci Admin terlebih dahulu.', true);
+                const btn = document.getElementById('btnGenerate');
+                btn.disabled = true; btn.classList.add('opacity-60');
+                try {
+                    const res = await serverPost({
+                        action: 'createLink', adminKey, name: clientName, folderId,
+                        kuota: kuota && parseInt(kuota) > 0 ? parseInt(kuota) : null,
+                        deadline: deadlineMs, prot: document.getElementById('protCheck').checked,
+                        wm: document.getElementById('wmCheck').checked, phone: clientPhone
+                    });
+                    if (!res.ok) return showAlert(serverErrorText(res.error), true);
+                    localStorage.setItem('cpAdminKey', adminKey);
+                    finalUrl += '?c=' + res.code;
+                    if (document.getElementById('linkList').dataset.loaded) loadLinkList();
+                } catch (e) {
+                    if (!confirm('Server tidak dapat dihubungi. Buat link biasa (tanpa penyimpanan di server)?')) return;
+                    useLegacy = true;
+                } finally {
+                    btn.disabled = false; btn.classList.remove('opacity-60');
+                }
             }
 
-            if (document.getElementById('protCheck').checked) params.push('prot=1');
-            if (document.getElementById('wmCheck').checked) params.push('wm=1');
-
-            params.push(`i=${folderId}`);
-            finalUrl += '?' + params.join('&');
+            if (useLegacy) finalUrl += '?' + buildLegacyParams(clientName, kuota, deadlineMs, folderId);
 
             document.getElementById('resultBox').classList.remove('hidden');
             document.getElementById('finalUrl').value = finalUrl;
@@ -277,6 +342,97 @@
             } else {
                 btnSendWA.innerHTML = '<i class="fa-brands fa-whatsapp text-lg"></i> Buka WhatsApp';
             }
+        }
+
+        // ===== DAFTAR LINK (mode server) =====
+        function fmtDate(ms) {
+            if (!ms) return '-';
+            return new Date(ms).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':');
+        }
+
+        let currentLinks = [];
+        async function loadLinkList() {
+            const adminKey = document.getElementById('adminKey').value.trim();
+            if (!adminKey) return showAlert('Isi Kunci Admin terlebih dahulu.', true);
+            const box = document.getElementById('linkList');
+            const icon = document.querySelector('#btnLoadList i');
+            icon.classList.add('fa-spin');
+            try {
+                const res = await serverPost({ action: 'list', adminKey });
+                if (!res.ok) return showAlert(serverErrorText(res.error), true);
+                localStorage.setItem('cpAdminKey', adminKey);
+                currentLinks = res.links;
+                box.dataset.loaded = '1';
+                renderLinkList(res.now);
+            } catch (e) {
+                showAlert('Server tidak dapat dihubungi.', true);
+            } finally { icon.classList.remove('fa-spin'); }
+        }
+
+        function renderLinkList(now) {
+            const box = document.getElementById('linkList');
+            if (!currentLinks.length) { box.innerHTML = '<p class="p-6 text-sm text-slate-400 text-center">Belum ada link.</p>'; return; }
+            box.innerHTML = currentLinks.map(l => {
+                const expired = l.deadline !== null && now > l.deadline;
+                let state, tone;
+                if (l.closed) { state = 'Ditutup'; tone = 'bg-slate-100 text-slate-600'; }
+                else if (expired) { state = 'Waktu habis'; tone = 'bg-red-100 text-red-700'; }
+                else { state = 'Aktif'; tone = 'bg-green-100 text-green-700'; }
+                const progress = l.kuota ? `${l.selectedCount} / ${l.kuota} foto` : `${l.selectedCount} foto`;
+                return `<div class="p-4 space-y-2">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="font-bold text-sm text-slate-800 truncate">${escapeHtml(l.name || '(tanpa nama)')}</p>
+                            <p class="text-[11px] text-slate-500 font-mono">${escapeHtml(l.code)}</p>
+                        </div>
+                        <span class="shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${tone}">${state}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                        <p><i class="fa-solid fa-images mr-1 text-slate-400"></i>${progress}</p>
+                        <p><i class="fa-solid fa-hourglass-half mr-1 text-slate-400"></i>${l.deadline ? fmtDate(l.deadline) : 'Tanpa batas'}</p>
+                        <p class="col-span-2"><i class="fa-regular fa-clock mr-1 text-slate-400"></i>Terakhir memilih: ${fmtDate(l.updatedAt)}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        <button onclick="copyClientLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition"><i class="fa-solid fa-copy mr-1"></i>Salin Link</button>
+                        <button onclick="extendLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-blue-600 hover:text-blue-600 transition"><i class="fa-solid fa-calendar-plus mr-1"></i>Perpanjang</button>
+                        <button onclick="toggleLinkClosed('${l.code}', ${l.closed ? 'false' : 'true'})" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-red-500 hover:text-red-600 transition"><i class="fa-solid ${l.closed ? 'fa-lock-open' : 'fa-lock'} mr-1"></i>${l.closed ? 'Buka Lagi' : 'Tutup Sekarang'}</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function clientLinkFor(code) {
+            const base = document.getElementById('baseUrl').value.trim();
+            return (base.endsWith('/') ? base : base + '/') + '?c=' + code;
+        }
+
+        function copyClientLink(code) {
+            const link = clientLinkFor(code);
+            navigator.clipboard.writeText(link).then(() => showAlert('Link klien disalin!')).catch(() => { prompt('Salin link ini:', link); });
+        }
+
+        async function updateLinkOnServer(code, fields) {
+            const adminKey = document.getElementById('adminKey').value.trim();
+            const res = await serverPost(Object.assign({ action: 'updateLink', adminKey, c: code }, fields));
+            if (!res.ok) { showAlert(serverErrorText(res.error), true); return false; }
+            return true;
+        }
+
+        async function extendLink(code) {
+            const input = prompt('Perpanjang batas waktu sampai berapa hari dari sekarang? (contoh: 3)\nBatas baru jatuh pada pukul 23:59.', '3');
+            if (input === null) return;
+            const days = parseInt(input, 10);
+            if (!(days > 0)) return showAlert('Masukkan jumlah hari yang valid.', true);
+            const d = new Date(); d.setDate(d.getDate() + days); d.setHours(23, 59, 0, 0);
+            try {
+                if (await updateLinkOnServer(code, { deadline: d.getTime(), status: 'aktif' })) { showAlert('Batas waktu diperpanjang.'); loadLinkList(); }
+            } catch (e) { showAlert('Server tidak dapat dihubungi.', true); }
+        }
+
+        async function toggleLinkClosed(code, close) {
+            try {
+                if (await updateLinkOnServer(code, { status: close ? 'tutup' : 'aktif' })) { showAlert(close ? 'Link ditutup.' : 'Link dibuka kembali.'); loadLinkList(); }
+            } catch (e) { showAlert('Server tidak dapat dihubungi.', true); }
         }
 
         function getMessageTemplate(name, link) {
