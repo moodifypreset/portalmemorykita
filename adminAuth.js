@@ -119,6 +119,80 @@
 
     function logout() { clearSession(); try { localStorage.removeItem('cp_list_cache'); } catch (e) {} location.replace(LOGIN_PAGE); }
 
+    // ---- Ajakan review dari pembeli (tombol kecil mengambang di pojok kanan bawah) ----
+    // Muncul otomatis setelah 7 hari pemakaian (dihitung dari pemakaian pertama di browser ini, atau dari link tertua
+    // di daftar link bila lebih lama). Hilang selamanya di browser ini setelah pembeli menyatakan review sudah terkirim.
+    // (Browser tidak bisa tahu apakah pesan WhatsApp benar-benar terkirim, jadi pembeli ditanya setelah kembali ke halaman ini.)
+    const REVIEW_KEY = 'cp_review_done';
+    const FIRSTUSE_KEY = 'cp_first_use';
+    const REVIEW_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+    const REVIEW_WA = '6282117102831';
+    const REVIEW_TEXT = 'Halo Moodify Preset, saya pembeli Quick Selection & Sorter. Ini review saya: ';
+    const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+
+    function reviewFirstUse() {
+        const v = Number(lsGet(FIRSTUSE_KEY));
+        return v > 0 ? v : null;
+    }
+    // Dipanggil halaman admin bila tahu tanggal pemakaian yang lebih awal (mis. link pertama yang pernah dibuat)
+    function noteFirstUse(ts) {
+        ts = Number(ts);
+        if (!(ts > 0) || ts > Date.now()) return;
+        const cur = reviewFirstUse();
+        if (cur === null || ts < cur) lsSet(FIRSTUSE_KEY, String(ts));
+        maybeShowReview();
+    }
+    function reviewEligible() {
+        if (lsGet(REVIEW_KEY) === '1') return false;
+        const f = reviewFirstUse();
+        return f !== null && Date.now() - f >= REVIEW_AFTER_MS;
+    }
+    function setupReviewDock() {
+        if (lsGet(REVIEW_KEY) === '1') return;
+        if (reviewFirstUse() === null) lsSet(FIRSTUSE_KEY, String(Date.now()));
+        maybeShowReview();
+    }
+    function maybeShowReview() {
+        if (document.getElementById('reviewDock') || !document.body || !reviewEligible()) return;
+        const css = document.createElement('style');
+        css.textContent = '.review-dock{position:fixed;right:12px;bottom:12px;z-index:30;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:calc(100vw - 24px);pointer-events:none}' +
+            '.review-dock>*{pointer-events:auto}' +
+            '.review-fab{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:.5rem;padding:.55rem .95rem;border-radius:999px;font-family:inherit;font-weight:800;font-size:12px;line-height:1.2;color:#78350f;background:linear-gradient(135deg,#fde68a,#fbbf24);border:1px solid #f59e0b;box-shadow:0 4px 14px rgba(15,23,42,.28);text-decoration:none;cursor:pointer;transition:filter .15s,transform .1s;animation:rvIn .7s cubic-bezier(.2,1.4,.4,1) both,rvPulse 2.8s ease-out 1.2s infinite}' +
+            '.review-fab:hover{filter:brightness(.95);transform:translateY(-1px)}.review-fab:active{transform:translateY(1px)}' +
+            '.review-fab i{color:#b45309;display:inline-block;transform-origin:50% 55%;animation:rvStar 2.8s ease-in-out 1.2s infinite}' +
+            '.review-fab::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent);transform:skewX(-20deg);animation:rvShine 4.2s ease-in-out 1.8s infinite;pointer-events:none}' +
+            '.review-ask{width:min(280px,calc(100vw - 24px));background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:14px;padding:12px;box-shadow:0 10px 28px rgba(15,23,42,.3);font-family:inherit;font-weight:600;font-size:12px;line-height:1.4;animation:rvAsk .25s ease-out both}' +
+            '.review-ask p{margin:0 0 10px}.review-ask .ra-row{display:flex;gap:8px}' +
+            '.review-ask button{flex:1;padding:.5rem .4rem;border-radius:.6rem;font-family:inherit;font-weight:800;font-size:11.5px;line-height:1.2;border:1px solid #cbd5e1;background:#f1f5f9;color:#334155;cursor:pointer}' +
+            '.review-ask button.ra-yes{background:#16a34a;border-color:#16a34a;color:#fff}' +
+            'body.has-review-dock{padding-bottom:64px}' +
+            '@keyframes rvIn{0%{opacity:0;transform:translateY(40px) scale(.7)}100%{opacity:1;transform:none}}' +
+            '@keyframes rvPulse{0%{box-shadow:0 4px 14px rgba(15,23,42,.28),0 0 0 0 rgba(245,158,11,.55)}70%,100%{box-shadow:0 4px 14px rgba(15,23,42,.28),0 0 0 14px rgba(245,158,11,0)}}' +
+            '@keyframes rvStar{0%,60%,100%{transform:rotate(0) scale(1)}70%{transform:rotate(-18deg) scale(1.25)}80%{transform:rotate(14deg) scale(1.25)}90%{transform:rotate(0) scale(1.1)}}' +
+            '@keyframes rvShine{0%,55%{left:-60%}100%{left:140%}}' +
+            '@keyframes rvAsk{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:none}}' +
+            '@media (prefers-reduced-motion:reduce){.review-fab,.review-fab i,.review-fab::after,.review-ask{animation:none!important}}';
+        document.head.appendChild(css);
+        const dock = document.createElement('div');
+        dock.id = 'reviewDock'; dock.className = 'review-dock';
+        dock.innerHTML = '<div id="reviewAsk" class="review-ask" style="display:none"><p>Review sudah terkirim ke WhatsApp?</p><div class="ra-row"><button type="button" class="ra-yes" id="reviewYes">Sudah terkirim</button><button type="button" id="reviewNo">Belum</button></div></div>' +
+            '<a id="reviewBtn" class="review-fab" target="_blank" rel="noopener noreferrer" href="https://wa.me/' + REVIEW_WA + '?text=' + encodeURIComponent(REVIEW_TEXT) + '" title="Kirim review lewat WhatsApp"><i class="fa-solid fa-star"></i><span>Review Quick Selection &amp; Sorter disini</span></a>';
+        document.body.appendChild(dock);
+        document.body.classList.add('has-review-dock');
+        const ask = document.getElementById('reviewAsk');
+        let pending = false;
+        document.getElementById('reviewBtn').addEventListener('click', () => { pending = true; });
+        const showAsk = () => { if (pending) { pending = false; setTimeout(() => { ask.style.display = 'block'; }, 500); } };
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) showAsk(); });
+        window.addEventListener('focus', showAsk);
+        document.getElementById('reviewNo').addEventListener('click', () => { ask.style.display = 'none'; });
+        document.getElementById('reviewYes').addEventListener('click', () => {
+            lsSet(REVIEW_KEY, '1');
+            dock.remove(); document.body.classList.remove('has-review-dock');
+        });
+    }
+
     // Dipanggil oleh halaman admin. fn jalan jika ada sesi; jika tidak, ke login.html
     function onReady(fn) {
         if (!getSession()) {
@@ -128,9 +202,9 @@
             toLogin('');
             return;
         }
-        const start = () => { try { fn(); } catch (e) { console.error(e); } checkServer(); };
+        const start = () => { try { fn(); } catch (e) { console.error(e); } checkServer(); try { setupReviewDock(); } catch (e) {} };
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
     }
 
-    window.Admin = { checkServer, onReady, call, post, doLogin, serverUrl, setServerUrl, urlFromFile, errorText, logout, getSession, nextPage, loginPage: LOGIN_PAGE };
+    window.Admin = { noteFirstUse, checkServer, onReady, call, post, doLogin, serverUrl, setServerUrl, urlFromFile, errorText, logout, getSession, nextPage, loginPage: LOGIN_PAGE };
 })();
