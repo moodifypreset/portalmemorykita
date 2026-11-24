@@ -513,6 +513,20 @@
     </div>
 
     <!-- LIGHTBOX ZOOM -->
+    <!-- Layar PIN (hanya muncul jika admin memasang PIN pada link) -->
+    <div id="pinGate" class="hidden fixed inset-0 z-[90] items-center justify-center p-4 bg-slate-100 dark:bg-slate-900">
+        <form id="pinForm" onsubmit="submitPin(event)" class="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 text-center">
+            <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-blue-100 dark:bg-slate-700 text-blue-600 dark:text-blue-300 flex items-center justify-center text-2xl"><i class="fa-solid fa-lock"></i></div>
+            <p id="pinGateVendor" class="text-xs font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400"></p>
+            <h2 class="mt-1 text-lg font-bold text-slate-800 dark:text-white" data-i18n="pinTitle">Galeri ini dilindungi PIN</h2>
+            <p id="pinGateHello" class="mt-1 text-sm text-slate-500 dark:text-slate-400"></p>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400" data-i18n="pinHint">Masukkan PIN yang dikirim oleh fotografer.</p>
+            <input id="pinInput" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="8" placeholder="••••" class="mt-4 w-full text-center text-2xl tracking-[0.5em] font-bold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-white px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <p id="pinMsg" class="mt-2 min-h-[1.25rem] text-xs font-semibold text-red-600"></p>
+            <button id="pinBtn" type="submit" class="mt-2 w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition" data-i18n="pinBtn">Buka Galeri</button>
+        </form>
+    </div>
+
     <div id="lightbox" class="fixed inset-0 bg-black/95 z-[60] hidden flex-col justify-center items-center opacity-0 transition-opacity duration-300 backdrop-blur-sm touch-pan-y">
         <div class="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-50 bg-gradient-to-b from-black/80 to-transparent">
             <p id="lightboxTitle" class="text-white font-medium drop-shadow-md text-sm md:text-base ml-2">Photo Name</p>
@@ -979,7 +993,70 @@
 
         // Semua permintaan memakai POST (jalur yang sama dengan pembuatan link di generatorLink).
         // Jika POST gagal di level jaringan/CORS, dicoba sekali lagi lewat GET sebagai cadangan.
+        // ----- PIN link (opsional, dipasang admin) -----
+        const pinStoreKey = (code) => 'cp_pin_' + code;
+        function storedPin(code) { try { return localStorage.getItem(pinStoreKey(code)) || ''; } catch (e) { return ''; } }
+        function setStoredPin(code, v) { try { if (v) localStorage.setItem(pinStoreKey(code), v); else localStorage.removeItem(pinStoreKey(code)); } catch (e) {} }
+        const isPinErr = (e) => !!(e && typeof e.serverCode === 'string' && e.serverCode.indexOf('pin_') === 0);
+        let pinLostHandled = false;
+        // PIN berubah / tidak berlaku lagi saat halaman sudah terbuka: bersihkan salinan lokal lalu minta PIN lagi
+        function handlePinLost() {
+            if (pinLostHandled) return; pinLostHandled = true;
+            const code = appState.remote && appState.remote.code;
+            try { if (code) { localStorage.removeItem(cfgCacheKey(code)); setStoredPin(code, ''); } } catch (e) {}
+            location.reload();
+        }
+        let pinResolve = null;
+        function showPinGate(err) {
+            const g = document.getElementById('pinGate');
+            const ls = document.getElementById('loadingState'); ls.classList.add('hidden'); ls.classList.remove('flex');
+            g.classList.remove('hidden'); g.classList.add('flex');
+            const info = (err && err.data) || {};
+            document.getElementById('pinGateVendor').textContent = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) ? CONFIG_APP.namaVendor : '';
+            const nm = info.link && info.link.name;
+            document.getElementById('pinGateHello').textContent = nm ? t('pinHello', { name: nm }) : '';
+            const msg = document.getElementById('pinMsg'), inp = document.getElementById('pinInput'), btn = document.getElementById('pinBtn');
+            const code = err && err.serverCode;
+            msg.textContent = code === 'pin_wrong' ? t('pinWrong', { left: info.left }) : code === 'pin_locked' ? t('pinLocked', { min: info.retryMin || 15 }) : '';
+            const locked = code === 'pin_locked';
+            inp.disabled = locked; btn.disabled = locked; inp.value = '';
+            btn.textContent = t('pinBtn');
+            if (!locked) setTimeout(() => { try { inp.focus(); } catch (e) {} }, 50);
+            applyTranslations();
+            return new Promise(res => { pinResolve = res; });
+        }
+        function submitPin(ev) {
+            if (ev) ev.preventDefault();
+            const inp = document.getElementById('pinInput'), msg = document.getElementById('pinMsg'), btn = document.getElementById('pinBtn');
+            const v = inp.value.replace(/\D/g, '');
+            if (v.length < 4) { msg.textContent = t('pinShort'); return; }
+            msg.textContent = ''; btn.disabled = true; btn.textContent = t('pinChecking');
+            if (pinResolve) { const r = pinResolve; pinResolve = null; r(v); }
+        }
+        function hidePinGate() { const g = document.getElementById('pinGate'); g.classList.add('hidden'); g.classList.remove('flex'); }
+        async function unlockWithPin(code, firstErr) {
+            let err = firstErr;
+            for (;;) {
+                const pin = await showPinGate(err);
+                setStoredPin(code, pin);
+                try {
+                    const data = await loadRemoteConfig(code);
+                    hidePinGate();
+                    const ls = document.getElementById('loadingState'); ls.classList.remove('hidden'); ls.classList.add('flex');
+                    return data;
+                } catch (e) {
+                    if (isPinErr(e)) { setStoredPin(code, ''); err = e; continue; }
+                    hidePinGate(); throw e;
+                }
+            }
+        }
+        async function loadRemoteConfigPin(code) {
+            try { return await loadRemoteConfig(code); }
+            catch (e) { if (isPinErr(e)) return await unlockWithPin(code, e); throw e; }
+        }
+
         async function serverCall(method, payload, timeoutMs = 20000) {
+            if (payload && payload.c && !('pin' in payload)) { const sp = storedPin(payload.c); if (sp) payload = Object.assign({}, payload, { pin: sp }); }
             const base = serverUrl();
             const attempt = async (viaGet) => {
                 const ctrl = new AbortController();
@@ -993,7 +1070,9 @@
                         // text/plain = "simple request": tidak memicu preflight CORS yang tidak didukung Apps Script
                         res = await fetch(base, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctrl.signal });
                     }
-                    return await res.json();
+                    const out = await res.json();
+                    if (out && typeof out.error === 'string' && out.error.indexOf('pin_') === 0 && appState.remote && appState.remote.unlocked) handlePinLost();
+                    return out;
                 } finally { clearTimeout(timer); }
             };
             try {
@@ -1121,6 +1200,7 @@
                 const err = new Error((data && data.error) || 'server');
                 err.serverCode = data && data.error;
                 err.detail = data && data.message;
+                if (data && typeof data.error === 'string' && data.error.indexOf('pin_') === 0) { err.data = data; if (data.settings) { try { applySettings(data.settings, { persist: false, refresh: false }); } catch (e) {} } }
                 throw err;
             }
             if (data.now) appState.timeOffset = data.now - Math.round((t0 + t1) / 2);   // jam server = acuan
@@ -1271,7 +1351,7 @@
             const early = readCfgCache(code);
             try {
                 if (early && early.link) { data = early; fromCache = true; }
-                else data = await loadRemoteConfig(code);
+                else data = await loadRemoteConfigPin(code);
             } catch (e) {
                 if (e.serverCode === 'not_found') return showInvalidLink(t('errLinkInvalid'));
                 console.error('Gagal memuat konfigurasi dari server:', e);
@@ -1288,6 +1368,7 @@
             document.getElementById('driveLink').value = `https://drive.google.com/drive/folders/${data.link.folderId}`;
             document.getElementById('syncRow').classList.remove('hidden');
             setSyncStatus(offline ? 'offline' : 'idle');
+            appState.remote.unlocked = true;
             startRemoteWatchers();
             applyTranslations();
             loadFromDrive();
@@ -1332,6 +1413,21 @@
             return v;
         }
         function folderTag(p) { return cleanFolder(p.folderName); }
+        // Label sumber untuk daftar teks/WA: sub-folder bila ada, kalau foto di folder utama pakai nama folder utama itu
+        function sourceLabel(p, md) {
+            const f = folderTag(p);
+            if (f) return md ? ` _[folder: ${f}]_` : `   [folder: ${f}]`;
+            const r = String(appState.rootFolderName || '').trim();
+            return r ? (md ? ` _[sumber: ${r}]_` : `   [sumber: ${r}]`) : '';
+        }
+        async function fetchRootFolderName(id) {
+            if (!id || appState.rootFolderNameFor === id) return;
+            appState.rootFolderNameFor = id; appState.rootFolderName = '';
+            try {
+                const r = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?fields=name&key=${CONFIG_APP.googleApiKey}`);
+                if (r.ok) { const j = await r.json(); appState.rootFolderName = String(j.name || '').trim(); }
+            } catch (e) {}
+        }
 
         function remotePayload() {
             return Array.from(appState.selectedMap.values()).map(p => ({ id: p.id, name: p.name, note: appState.notes[p.id] || '', folder: cleanFolder(p.folderName) }));
@@ -1412,7 +1508,7 @@
             const r = appState.remote;
             if (!r || !hasPending() || isLocked() || !navigator.sendBeacon) return;
             try {
-                navigator.sendBeacon(serverUrl(), new Blob([JSON.stringify({ action: 'save', c: r.code, selected: remotePayload(), base: baseForServer() })], { type: 'text/plain;charset=utf-8' }));
+                navigator.sendBeacon(serverUrl(), new Blob([JSON.stringify({ action: 'save', c: r.code, selected: remotePayload(), base: baseForServer(), pin: storedPin(r.code) })], { type: 'text/plain;charset=utf-8' }));
             } catch (e) {}
         }
 
@@ -1699,6 +1795,7 @@
                 errNetwork: "Gagal terhubung ke Google Drive. Periksa koneksi internet Anda.",
                 errEmpty: "Folder kosong atau hak akses bukan Publik.",
                 listDeadline: "Batas Pilih : {date}",
+                pinTitle: "Galeri ini dilindungi PIN", pinHint: "Masukkan PIN yang dikirim oleh fotografer.", pinBtn: "Buka Galeri", pinHello: "Halo, {name}", pinWrong: "PIN salah. Sisa percobaan: {left}.", pinLocked: "Terlalu banyak percobaan. Coba lagi sekitar {min} menit lagi.", pinShort: "PIN terdiri dari 4–8 angka.", pinChecking: "Memeriksa...",
                 listLocked: "Status    : Melewati batas waktu - sisa foto dipilihkan fotografer",
                 gridTip: "Ubah Baris Foto",
                 reshuffleTip: "Tekan ini untuk acak foto",
@@ -1806,6 +1903,7 @@
                 errNetwork: "Could not reach Google Drive. Please check your connection.",
                 errEmpty: "The folder is empty or not shared publicly.",
                 listDeadline: "Deadline  : {date}",
+                pinTitle: "This gallery is PIN-protected", pinHint: "Enter the PIN sent by your photographer.", pinBtn: "Open Gallery", pinHello: "Hello, {name}", pinWrong: "Wrong PIN. Attempts left: {left}.", pinLocked: "Too many attempts. Please try again in about {min} minutes.", pinShort: "The PIN is 4–8 digits.", pinChecking: "Checking...",
                 listLocked: "Status    : Past deadline - remaining photos chosen by the photographer",
                 gridTip: "Change Grid Rows",
                 reshuffleTip: "Click to reshuffle",
@@ -2157,6 +2255,7 @@
                 if (!targetFolderId) return showAlert('Link Google Drive tidak valid.', 'error');
 
                 appState.rootFolderId = targetFolderId;
+                fetchRootFolderName(targetFolderId);
                 appState.folderHistory = [];
                 loadProgress(appState.rootFolderId);
                 mergeRemoteSelection();
@@ -2725,7 +2824,7 @@
             
             selectedPhotos.forEach((p, index) => {
                 const note = appState.notes[p.id];
-                textContent += `${index + 1}. ${p.name}` + (folderTag(p) ? `   [folder: ${folderTag(p)}]` : '') + `\n`;
+                textContent += `${index + 1}. ${p.name}` + sourceLabel(p, false) + `\n`;
                 if (note) textContent += `   Catatan: ${note}\n`;
             });
             
@@ -2754,7 +2853,7 @@
             let textToCopy = `*List Foto Pilihan Client*\nLayanan: ${vendor}\nKlien: *${appState.clientName}*\nTotal: ${selectedPhotos.length} Foto\n\n`;
             selectedPhotos.forEach((p, index) => {
                 const note = appState.notes[p.id];
-                textToCopy += `${index + 1}. ${p.name}` + (folderTag(p) ? ` _[folder: ${folderTag(p)}]_` : '') + `\n`;
+                textToCopy += `${index + 1}. ${p.name}` + sourceLabel(p, true) + `\n`;
                 if (note) textToCopy += `   Catatan: ${note}\n`;
             });
             if (appState.deadline !== null && isLocked()) textToCopy += `\n_${t('listLocked').replace(/^Status\s*:\s*/, '')}_\n`;

@@ -170,6 +170,16 @@
                         <input type="checkbox" id="dlCheck" class="w-4 h-4 mt-0.5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
                         <span class="text-sm font-medium text-slate-700">Izinkan klien mengunduh foto <span class="block text-[11px] font-normal text-slate-500">Tombol "Unduh" muncul di portal klien (resolusi asli). Bisa diubah kapan saja lewat tombol Edit. Kalau tidak dicentang, klien hanya bisa melihat & memilih.</span></span>
                     </label>
+                    <div class="pt-3 border-t border-blue-200">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" id="pinCheck" onchange="togglePinField('pinCheck','pinBox','pinValue')" class="w-4 h-4 mt-0.5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
+                            <span class="text-sm font-medium text-slate-700">Pasang PIN pada link (opsional) <span class="block text-[11px] font-normal text-slate-500">Klien harus memasukkan PIN sebelum galeri terbuka. Kirim PIN terpisah atau ikut di pesan. Bisa diubah atau dihapus lewat tombol Edit.</span></span>
+                        </label>
+                        <div id="pinBox" class="hidden mt-2 flex items-center gap-2 pl-7">
+                            <input id="pinValue" type="text" inputmode="numeric" maxlength="8" placeholder="4–8 angka" class="w-32 text-center font-mono font-bold tracking-widest bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-600">
+                            <button type="button" onclick="randomPin('pinValue')" class="px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-200 transition"><i class="fa-solid fa-dice mr-1"></i>Acak</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -289,6 +299,17 @@
                     <span class="text-sm font-bold text-slate-700"><i class="fa-solid fa-download mr-1 text-slate-400"></i>Izinkan klien mengunduh foto
                         <span class="block text-[11px] font-normal text-slate-500">Berlaku langsung: klien cukup memuat ulang halaman galerinya.</span></span>
                 </label>
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" id="editPinCheck" onchange="togglePinField('editPinCheck','editPinBox','editPinValue')" class="w-4 h-4 mt-0.5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
+                        <span class="text-sm font-bold text-slate-700"><i class="fa-solid fa-lock mr-1 text-slate-400"></i>PIN untuk membuka galeri
+                            <span class="block text-[11px] font-normal text-slate-500">Hilangkan centang untuk menghapus PIN. Jika PIN diubah, klien perlu memasukkan PIN yang baru.</span></span>
+                    </label>
+                    <div id="editPinBox" class="hidden mt-2 flex items-center gap-2 pl-7">
+                        <input id="editPinValue" type="text" inputmode="numeric" maxlength="8" placeholder="4–8 angka" class="w-32 text-center font-mono font-bold tracking-widest bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-600">
+                        <button type="button" onclick="randomPin('editPinValue')" class="px-3 py-1.5 text-xs font-bold bg-white text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-100 transition"><i class="fa-solid fa-dice mr-1"></i>Acak</button>
+                    </div>
+                </div>
             </div>
             <div class="px-5 py-4 border-t border-slate-200 flex justify-end gap-2">
                 <button type="button" onclick="closeEditModal()" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-200 transition">Batal</button>
@@ -505,15 +526,20 @@
 
             const btn = document.getElementById('btnGenerate');
             btn.disabled = true; btn.classList.add('opacity-60');
+            const wantPin = document.getElementById('pinCheck').checked;
+            const pinVal = wantPin ? document.getElementById('pinValue').value.trim() : '';
+            if (wantPin && !PIN_OK(pinVal)) { showAlert('PIN harus 4–8 angka.', true); return; }
             try {
+                if (wantPin && !(await serverSupportsPin())) return showAlert(PIN_OLD_SERVER_MSG, true);
                 const res = await Admin.call({
-                    action: 'createLink', name: clientName, folderId,
+                    action: 'createLink', name: clientName, folderId, pin: pinVal,
                     kuota: kuota && parseInt(kuota) > 0 ? parseInt(kuota) : null,
                     deadline: deadlineMs, prot: document.getElementById('protCheck').checked,
                     wm: document.getElementById('wmCheck').checked, dl: document.getElementById('dlCheck').checked, phone: clientPhone
                 });
                 if (!res.ok) { if (res.error !== 'unauthorized') showAlert(serverErrorText(res.error, res), true); return; }
                 finalUrl += '?c=' + res.code;
+                resultPin = pinVal;
                 if (document.getElementById('linkList').dataset.loaded) loadLinkList();
             } catch (e) {
                 return showAlert('Server tidak dapat dihubungi. Periksa internet Anda.', true);
@@ -810,6 +836,7 @@
                         <p><i class="fa-solid fa-hourglass-half mr-1 text-slate-400"></i>Batas: ${l.deadline ? fmtDate(l.deadline) : 'Tanpa batas'}</p>
                         <p class="col-span-2"><i class="fa-regular fa-clock mr-1 text-slate-400"></i>Terakhir memilih: <span class="js-upd">${fmtDate(l.updatedAt)}</span></p>
                         <p class="col-span-2"><i class="fa-solid fa-download mr-1 text-slate-400"></i>Download foto: ${l.dl ? '<b class="text-green-700">Diizinkan</b>' : '<span class="text-slate-500">Tidak diizinkan</span>'}</p>
+                        ${l.pin ? `<p class="col-span-2"><i class="fa-solid fa-lock mr-1 text-slate-400"></i>PIN: <button type="button" onclick="copyPin('${l.code}')" class="font-mono font-bold tracking-widest text-slate-800 hover:text-blue-600" title="Ketuk untuk menyalin PIN">${escapeHtml(l.pin)}</button></p>` : ''}
                         ${l.openedAt ? '' : '<p class="col-span-2 text-slate-400"><i class="fa-regular fa-eye-slash mr-1"></i>Link belum dibuka klien</p>'}
                         ${dur ? `<p class="col-span-2"><i class="fa-solid fa-stopwatch mr-1 text-slate-400"></i>Waktu memilih: <b>${dur}</b></p>` : ''}
                         ${l.hasil ? `<p class="col-span-2 truncate"><i class="fa-solid fa-link mr-1 text-slate-400"></i>Hasil: <a href="${escapeHtml(l.hasil)}" target="_blank" rel="noopener" class="text-blue-600 font-semibold hover:underline">${escapeHtml(l.hasil)}</a></p>` : ''}
@@ -1013,6 +1040,9 @@
             document.getElementById('editKuota').value = l.kuota || '';
             document.getElementById('editDeadline').value = l.deadline ? toLocalInputValue(new Date(l.deadline)) : '';
             document.getElementById('editDl').checked = !!l.dl;
+            document.getElementById('editPinCheck').checked = !!l.pin;
+            document.getElementById('editPinValue').value = l.pin || '';
+            document.getElementById('editPinBox').classList.toggle('hidden', !l.pin);
             updateEditHints();
             document.getElementById('editModal').classList.remove('hidden');
             setTimeout(() => document.getElementById('editKuota').focus(), 30);
@@ -1036,7 +1066,7 @@
             const k = parseInt(kv, 10);
             const dv = document.getElementById('editDeadline').value;
             const ms = dv ? new Date(dv).getTime() : null;
-            return { kuota: k > 0 ? k : null, kuotaBad: kv !== '' && !(k > 0), deadline: (ms === null || isNaN(ms)) ? null : ms, dl: document.getElementById('editDl').checked };
+            return { kuota: k > 0 ? k : null, kuotaBad: kv !== '' && !(k > 0), deadline: (ms === null || isNaN(ms)) ? null : ms, dl: document.getElementById('editDl').checked, pin: document.getElementById('editPinCheck').checked ? document.getElementById('editPinValue').value.trim() : '' };
         }
         function updateEditHints() {
             const l = currentLinks.find(x => x.code === editCode) || {};
@@ -1061,17 +1091,22 @@
             if ((l.kuota || null) !== v.kuota) changes.push('Kuota: <b>' + (l.kuota || 'bebas') + '</b> → <b>' + (v.kuota || 'bebas') + '</b>');
             if ((l.deadline || null) !== v.deadline) changes.push('Batas waktu: <b>' + (l.deadline ? fmtDate(l.deadline) : 'tanpa batas') + '</b> → <b>' + (v.deadline ? fmtDate(v.deadline) : 'tanpa batas') + '</b>');
             if (!!l.dl !== v.dl) changes.push('Download foto: <b>' + (l.dl ? 'diizinkan' : 'tidak diizinkan') + '</b> → <b>' + (v.dl ? 'diizinkan' : 'tidak diizinkan') + '</b>');
+            if (document.getElementById('editPinCheck').checked && !PIN_OK(v.pin)) return showAlert('PIN harus 4–8 angka.', true);
+            const pinChanged = (l.pin || '') !== v.pin;
+            if (pinChanged) changes.push('PIN: <b>' + (l.pin || 'tanpa PIN') + '</b> → <b>' + (v.pin || 'tanpa PIN') + '</b>');
             if (!changes.length) { closeEditModal(); return showAlert('Tidak ada perubahan.'); }
             let warn = '';
             if (v.deadline !== null && v.deadline <= Date.now()) warn += '<p class="mt-2 text-red-600 text-xs font-bold">Batas waktu sudah lewat, klien tidak bisa memilih lagi.</p>';
             if (v.kuota && (l.selectedCount || 0) > v.kuota) warn += '<p class="mt-2 text-amber-600 text-xs font-bold">Pilihan klien (' + l.selectedCount + ' foto) melebihi kuota baru.</p>';
             if (l.closed) warn += '<p class="mt-2 text-slate-500 text-xs">Link ini masih <b>ditutup</b>. Klik "Buka Lagi" agar klien bisa memilih.</p>';
+            if (pinChanged && v.pin) warn += '<p class="mt-2 text-slate-500 text-xs">Kirim PIN baru ke klien. Perangkat klien yang sudah terbuka akan diminta PIN lagi.</p>';
+            if (pinChanged && !(await serverSupportsPin())) return showAlert(PIN_OLD_SERVER_MSG, true);
             const ok = await askConfirm({ title: 'Simpan perubahan?', html: '<p class="text-left inline-block">' + changes.join('<br>') + '</p>' + warn, okText: 'Ya, Simpan', icon: 'fa-pen-to-square' });
             if (!ok) return;
             const btn = document.getElementById('editSaveBtn');
             btn.disabled = true; btn.classList.add('opacity-60');
             try {
-                if (await updateLinkOnServer(code, { kuota: v.kuota || '', deadline: v.deadline, dl: v.dl })) { closeEditModal(); showAlert('Link berhasil diperbarui.'); loadLinkList(); }
+                if (await updateLinkOnServer(code, Object.assign({ kuota: v.kuota || '', deadline: v.deadline, dl: v.dl }, pinChanged ? { pin: v.pin } : {}))) { closeEditModal(); showAlert('Link berhasil diperbarui.'); loadLinkList(); }
             } catch (e) { showAlert('Server tidak dapat dihubungi.', true); }
             finally { btn.disabled = false; btn.classList.remove('opacity-60'); }
         }
@@ -1108,7 +1143,29 @@
             if (e.key === 'Enter' && !document.getElementById('editModal').classList.contains('hidden') && document.getElementById('confirmModal').classList.contains('hidden') && e.target.tagName === 'INPUT') { e.preventDefault(); saveEditLink(); }
         });
 
-        function getMessageTemplate(name, link) {
+        // ===== PIN OPSIONAL =====
+        let resultPin = '';
+        const PIN_OK = (v) => /^[0-9]{4,8}$/.test(String(v || ''));
+        function randomPin(inputId) {
+            const a = new Uint32Array(1); (window.crypto || window.msCrypto).getRandomValues(a);
+            document.getElementById(inputId).value = String(a[0] % 10000).padStart(4, '0');
+        }
+        function togglePinField(checkId, boxId, inputId) {
+            const on = document.getElementById(checkId).checked;
+            document.getElementById(boxId).classList.toggle('hidden', !on);
+            const inp = document.getElementById(inputId);
+            if (on && !inp.value) randomPin(inputId);
+        }
+        async function serverSupportsPin() {
+            try { const v = await Admin.checkServer(); return v.version === null || v.version >= 7; } catch (e) { return true; }
+        }
+        const PIN_OLD_SERVER_MSG = 'Fitur PIN butuh kode.gs terbaru (versi 7). Tempel kode baru lalu Deploy > Manage deployments > Edit > New version.';
+        function copyPin(code) {
+            const l = currentLinks.find(x => x.code === code); if (!l || !l.pin) return;
+            navigator.clipboard.writeText(l.pin).then(() => showAlert('PIN disalin!')).catch(() => { prompt('Salin PIN ini:', l.pin); });
+        }
+
+        function getMessageTemplate(name, link, pin) {
             let template = document.getElementById('waTemplate').value;
             let displayName = name ? `Kak ${name}` : "Kakak";
             const deadlineMs = getDeadlineMs();
@@ -1121,8 +1178,12 @@
                 template = template.replace(/\s+$/, '') + '\n\nBatas waktu memilih foto: [BATAS]';
             }
 
+            pin = pin === undefined ? resultPin : pin;
+            if (!pin) template = template.split('\n').filter(line => !line.includes('[PIN]')).join('\n');
+            else if (!template.includes('[PIN]')) template = template.replace('[LINK]', '[LINK]\nPIN: [PIN]');
             return template
                 .replace(/\[NAMA\]/g, displayName)
+                .replace(/\[PIN\]/g, pin || '')
                 .replace(/\[LINK\]/g, link)
                 .replace(/\[BATAS\]/g, deadlineMs !== null ? formatDeadline(deadlineMs) : '');
         }

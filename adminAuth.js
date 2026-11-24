@@ -77,6 +77,7 @@
             no_email: 'Alamat email tujuan tidak ditemukan. Isi email notifikasi.',
             mail_auth: 'Server belum diizinkan mengirim email. Deploy ulang (Deploy > Manage deployments > Edit > New version) lalu klik Authorize access dan izinkan semua akses.',
             bad_url: 'Link hasil harus diawali https://',
+            bad_pin: 'PIN harus 4–8 angka.',
             unknown_action: 'kode.gs di server belum versi terbaru. Tempel kode baru lalu Deploy > New version.'
         };
         if (code === 'locked') {

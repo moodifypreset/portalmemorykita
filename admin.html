@@ -347,6 +347,7 @@
                 const folderM = cleanName.match(/\[folder\s*:\s*([^\]]*)\]/i);
                 const folderHint = folderM ? folderM[1].trim() : '';
                 cleanName = cleanName.replace(/\s*_?\[folder\s*:.*\]_?/i, '').trim();
+                cleanName = cleanName.replace(/\s*_?\[sumber\s*:.*\]_?/i, '').trim();   // label folder utama (hanya info, bukan petunjuk pencarian)
                 cleanName = cleanName.replace(/⭐/g, '').trim();
 
                 const dotIndex = cleanName.lastIndexOf('.');
