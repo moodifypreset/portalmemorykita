@@ -43,12 +43,20 @@
         .lk-tool.lk-del:hover { background:rgba(244,63,94,.1); }
         html.dark .lk-tool.lk-del, html.dark .lk-tool.lk-del i { color:#fb7185; }
         .lk-btn:focus-visible, .lk-tool:focus-visible { outline:2px solid var(--acc,#2563eb); outline-offset:-2px; }
-        @media (max-width: 400px) { .lk-tool i { display:none; } .lk-btn { font-size:11.5px; padding:0 .5rem; } .pg i { display:none; } }
+        @media (max-width: 400px) { .lk-tool i { display:none; } .lk-btn { font-size:11.5px; padding:0 .5rem; } }
         .lk-tool.lk-wa i { color:#16a34a; opacity:1; }
         /* Progres pengerjaan di kartu */
         .pg-row { border-radius:.6rem; background:var(--surface2,#f8fafc); border:1px solid var(--border,#e2e8f0); padding:3px; gap:3px; }
         .pg { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; height:1.85rem; border-radius:.45rem; font-size:11px; font-weight:600; color:var(--muted,#64748b); transition:background-color .15s, color .15s; }
         .pg i { font-size:10.5px; opacity:.7; }
+        .pg-row { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
+        .pg span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+        .pg-cap { font-size:11px; line-height:1.35; color:var(--muted,#64748b); margin-top:.35rem; display:flex; gap:.4rem; align-items:flex-start; }
+        .pg-cap i { margin-top:.15rem; opacity:.8; }
+        @media (max-width: 560px) {
+            .pg { flex-direction:column; gap:.15rem; height:auto; min-height:2.9rem; padding:.35rem .15rem; font-size:10.5px; line-height:1.1; }
+            .pg i { display:inline-block; font-size:12px; }
+        }
         .pg:hover { background:var(--hover,#e2e8f0); color:var(--text,#0f172a); }
         .pg.done { color:var(--accfg,#2563eb); }
         .pg.done i { opacity:1; }
@@ -784,6 +792,7 @@
                 const progress = l.kuota ? `${l.selectedCount} / ${l.kuota} foto` : `${l.selectedCount} foto`;
                 const pIdx = PROG.findIndex(p => p.k === pg);
                 const steps = PROG.map((p, i) => `<button type="button" onclick="setProgres('${l.code}','${p.k}')" class="pg ${i < pIdx ? 'done' : i === pIdx ? 'now' : ''}" title="Ubah progres ke ${p.label}"><i class="fa-solid ${i < pIdx ? 'fa-check' : p.icon}"></i><span>${p.label}</span></button>`).join('');
+                const PG_HINT = { memilih: 'Klien masih memilih foto.', dikirim: 'Klien sudah mengirim pilihan. Klik "Diedit" saat Anda mulai mengedit.', diedit: 'Foto sedang diedit. Pilihan klien dikunci.', selesai: 'Hasil sudah selesai. Pilihan klien dikunci.' };
                 const dur = (l.openedAt && l.submittedAt && l.submittedAt >= l.openedAt) ? fmtDur(l.submittedAt - l.openedAt) : '';
                 return `<div class="p-4 space-y-2" data-code="${l.code}">
                     <div class="flex items-start justify-between gap-3">
@@ -798,14 +807,15 @@
                     </div>
                     <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-slate-600">
                         <p><i class="fa-solid fa-images mr-1 text-slate-400"></i><span class="js-prog">${progress}</span></p>
-                        <p><i class="fa-solid fa-hourglass-half mr-1 text-slate-400"></i>${l.deadline ? fmtDate(l.deadline) : 'Tanpa batas'}</p>
+                        <p><i class="fa-solid fa-hourglass-half mr-1 text-slate-400"></i>Batas: ${l.deadline ? fmtDate(l.deadline) : 'Tanpa batas'}</p>
                         <p class="col-span-2"><i class="fa-regular fa-clock mr-1 text-slate-400"></i>Terakhir memilih: <span class="js-upd">${fmtDate(l.updatedAt)}</span></p>
                         <p class="col-span-2"><i class="fa-solid fa-download mr-1 text-slate-400"></i>Download foto: ${l.dl ? '<b class="text-green-700">Diizinkan</b>' : '<span class="text-slate-500">Tidak diizinkan</span>'}</p>
                         ${l.openedAt ? '' : '<p class="col-span-2 text-slate-400"><i class="fa-regular fa-eye-slash mr-1"></i>Link belum dibuka klien</p>'}
                         ${dur ? `<p class="col-span-2"><i class="fa-solid fa-stopwatch mr-1 text-slate-400"></i>Waktu memilih: <b>${dur}</b></p>` : ''}
                         ${l.hasil ? `<p class="col-span-2 truncate"><i class="fa-solid fa-link mr-1 text-slate-400"></i>Hasil: <a href="${escapeHtml(l.hasil)}" target="_blank" rel="noopener" class="text-blue-600 font-semibold hover:underline">${escapeHtml(l.hasil)}</a></p>` : ''}
                     </div>
-                    <div class="pg-row grid grid-cols-4">${steps}</div>
+                    <div class="pg-row">${steps}</div>
+                    <p class="pg-cap"><i class="fa-solid fa-circle-info"></i><span>${PG_HINT[pg]} <span class="opacity-70">Ketuk langkah untuk mengubah status.</span></span></p>
                     <div class="lk-actions pt-1 space-y-2">
                         <div class="grid grid-cols-2 gap-2">
                             <button onclick="copyClientLink('${l.code}')" class="lk-btn lk-dark"><i class="fa-solid fa-copy"></i><span>Salin Link</span></button>
