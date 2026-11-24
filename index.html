@@ -428,6 +428,9 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
+                <button id="btnDlAll" onclick="downloadSelectedPhotos()" class="hidden px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition items-center gap-2 shadow-sm" title="Unduh foto pilihan">
+                    <i class="fa-solid fa-download text-lg"></i> <span class="hidden md:inline" data-i18n="btnDlAll">Unduh Foto</span>
+                </button>
                 <button onclick="downloadList()" class="px-4 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-bold rounded-xl transition flex items-center gap-2 border border-slate-300 dark:border-slate-600 shadow-sm" title="Download file .txt">
                     <i class="fa-solid fa-file-arrow-down text-lg"></i> <span class="hidden md:inline" data-i18n="btnDownload">Download List</span>
                 </button>
@@ -526,6 +529,9 @@
         </div>
         <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 w-11/12 max-w-md z-50">
             <p class="text-white/50 text-xs md:hidden text-center mb-[-5px] animate-pulse"><i class="fa-solid fa-arrows-left-right"></i> <span data-i18n="swipe">Geser kiri/kanan</span></p>
+            <button id="lightboxDlBtn" onclick="downloadPhoto(currentZoomPhoto, this)" class="hidden px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition items-center justify-center shadow-lg w-full sm:w-auto">
+                <i class="fa-solid fa-download mr-2"></i> <span data-i18n="btnDlPhoto">Unduh Foto</span>
+            </button>
             <button id="lightboxSelectBtn" onclick="toggleLightboxSelect()" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition flex items-center justify-center shadow-lg border border-slate-600 w-full sm:w-auto">
                 <i class="fa-regular fa-square-check mr-2"></i> <span id="btnSelectText">Pilih Foto Ini</span>
             </button>
@@ -544,7 +550,7 @@
             notes: {}, currentPage: 1, kuota: null, 
             viewMode: 'all', sortOrder: 'default', lang: 'id',
             gridMode: 2,
-            wmMode: false, protMode: false,
+            wmMode: false, protMode: false, dlMode: false,
             deadline: null,        // epoch ms batas waktu memilih (null = tanpa batas)
             timeOffset: 0,         // selisih jam server - jam perangkat (ms)
             lockedNotified: false,
@@ -1155,7 +1161,8 @@
                 appState.remoteApplied = true;
                 appState.wmMode = !!link.wm;
                 appState.protMode = !!link.prot;
-                initProtection();
+                appState.dlMode = !!link.dl;
+                initProtection(); applyDlMode();
             }
 
             if (appState.deadline === null) {
@@ -1638,6 +1645,7 @@
                 selFooterTitle: "Foto Terpilih",
                 selFooterDesc: "Kirim daftar ini ke tim kami",
                 btnDownload: "Download List",
+                btnDlPhoto: "Unduh Foto", btnDlAll: "Unduh Foto", dlStart: "Mengunduh...", dlFail: "Gagal mengunduh foto. Coba lagi.", dlProgress: "Mengunduh foto", dlDone: "Unduhan selesai",
                 btnWA: "Kirim WA",
                 tutTitle: "Cara Memilih Foto",
                 tutDesc: "Ikuti panduan mudah ini untuk menyeleksi foto favorit Anda:",
@@ -1744,6 +1752,7 @@
                 selFooterTitle: "Selected Photos",
                 selFooterDesc: "Send this list to our team",
                 btnDownload: "Download List",
+                btnDlPhoto: "Download Photo", btnDlAll: "Download Photos", dlStart: "Downloading...", dlFail: "Download failed. Please try again.", dlProgress: "Downloading photo", dlDone: "Download complete",
                 btnWA: "Send via WA",
                 tutTitle: "How to Select Photos",
                 tutDesc: "Follow these simple steps to select your favorite photos:",
@@ -1905,7 +1914,8 @@
             // MODE LAMA (tanpa server): semua pengaturan ada di URL
             appState.wmMode = urlParams.get('wm') === '1';
             appState.protMode = urlParams.get('prot') === '1';
-            initProtection();
+            appState.dlMode = urlParams.get('dl') === '1';
+            initProtection(); applyDlMode();
 
             if (urlName) {
                 appState.clientName = decodeURIComponent(urlName).replace(/-/g, ' ');
@@ -2438,7 +2448,7 @@
 
                 if (appState.viewMode === 'selected' && folderTag(photo)) {
                     const fb = document.createElement('div');
-                    fb.className = 'absolute left-2 bottom-2 z-20 max-w-[85%] truncate bg-slate-900/70 text-white text-[10px] md:text-xs font-semibold px-2 py-1 rounded-md pointer-events-none';
+                    fb.className = 'absolute left-2 top-2 z-20 max-w-[60%] truncate bg-slate-900/70 text-white text-[10px] md:text-xs font-semibold px-2 py-1 rounded-md pointer-events-none';
                     fb.innerHTML = '<i class="fa-solid fa-folder mr-1 text-yellow-300"></i>' + escapeHtml(folderTag(photo));
                     card.appendChild(fb);
                 }
@@ -2582,6 +2592,55 @@
                 }
             }
             if (count > 0) { bar.classList.remove('translate-y-full'); } else { bar.classList.add('translate-y-full'); }
+        }
+
+        // ===== DOWNLOAD FOTO (diizinkan admin per link) =====
+        function applyDlMode() {
+            const on = !!appState.dlMode;
+            const a = document.getElementById('btnDlAll'); if (a) { a.classList.toggle('hidden', !on); a.classList.toggle('flex', on); }
+            const b = document.getElementById('lightboxDlBtn'); if (b) { b.classList.toggle('hidden', !on); b.classList.toggle('flex', on); }
+        }
+        async function fetchPhotoBlob(photo) {
+            const id = encodeURIComponent(photo.id);
+            const r = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&key=${CONFIG_APP.googleApiKey}`);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return await r.blob();
+        }
+        function saveBlobAs(blob, name) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = name || 'foto.jpg';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 15000);
+        }
+        async function downloadPhoto(photo, btn) {
+            if (!appState.dlMode || !photo) return;
+            const t = TRANSLATIONS[appState.lang] || TRANSLATIONS.id;
+            if (btn) btn.disabled = true;
+            showAlert(t.dlStart);
+            try {
+                saveBlobAs(await fetchPhotoBlob(photo), photo.name);
+            } catch (e) {
+                // cadangan: tautan unduh langsung Google Drive
+                window.open(`https://drive.google.com/uc?export=download&id=${encodeURIComponent(photo.id)}`, '_blank');
+            }
+            if (btn) btn.disabled = false;
+        }
+        let dlBusy = false;
+        async function downloadSelectedPhotos() {
+            if (!appState.dlMode || dlBusy || appState.selectedMap.size === 0) return;
+            const t = TRANSLATIONS[appState.lang] || TRANSLATIONS.id;
+            const list = Array.from(appState.selectedMap.values());
+            dlBusy = true;
+            try {
+                for (let i = 0; i < list.length; i++) {
+                    showAlert(`${t.dlProgress} ${i + 1}/${list.length}`);
+                    try { saveBlobAs(await fetchPhotoBlob(list[i]), list[i].name); }
+                    catch (e) { window.open(`https://drive.google.com/uc?export=download&id=${encodeURIComponent(list[i].id)}`, '_blank'); }
+                    await new Promise(r => setTimeout(r, 700));
+                }
+                showAlert(t.dlDone);
+            } finally { dlBusy = false; }
         }
 
         function downloadList() {

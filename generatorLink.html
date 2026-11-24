@@ -158,6 +158,10 @@
                         <input type="checkbox" id="wmCheck" checked class="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
                         <span class="text-sm font-medium text-slate-700">Tampilkan Watermark (Nama Vendor) di atas foto</span>
                     </label>
+                    <label class="flex items-start gap-3 cursor-pointer pt-3 border-t border-blue-200">
+                        <input type="checkbox" id="dlCheck" class="w-4 h-4 mt-0.5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
+                        <span class="text-sm font-medium text-slate-700">Izinkan klien mengunduh foto <span class="block text-[11px] font-normal text-slate-500">Tombol "Unduh" muncul di portal klien (resolusi asli). Bisa diubah kapan saja lewat tombol Edit. Kalau tidak dicentang, klien hanya bisa melihat & memilih.</span></span>
+                    </label>
                 </div>
             </div>
 
@@ -272,6 +276,11 @@
                     </div>
                     <p id="editDeadlineHint" class="text-[11px] text-slate-500 mt-1"></p>
                 </div>
+                <label class="flex items-start gap-3 cursor-pointer p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <input type="checkbox" id="editDl" class="w-4 h-4 mt-0.5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
+                    <span class="text-sm font-bold text-slate-700"><i class="fa-solid fa-download mr-1 text-slate-400"></i>Izinkan klien mengunduh foto
+                        <span class="block text-[11px] font-normal text-slate-500">Berlaku langsung: klien cukup memuat ulang halaman galerinya.</span></span>
+                </label>
             </div>
             <div class="px-5 py-4 border-t border-slate-200 flex justify-end gap-2">
                 <button type="button" onclick="closeEditModal()" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-200 transition">Batal</button>
@@ -493,7 +502,7 @@
                     action: 'createLink', name: clientName, folderId,
                     kuota: kuota && parseInt(kuota) > 0 ? parseInt(kuota) : null,
                     deadline: deadlineMs, prot: document.getElementById('protCheck').checked,
-                    wm: document.getElementById('wmCheck').checked, phone: clientPhone
+                    wm: document.getElementById('wmCheck').checked, dl: document.getElementById('dlCheck').checked, phone: clientPhone
                 });
                 if (!res.ok) { if (res.error !== 'unauthorized') showAlert(serverErrorText(res.error, res), true); return; }
                 finalUrl += '?c=' + res.code;
@@ -791,6 +800,7 @@
                         <p><i class="fa-solid fa-images mr-1 text-slate-400"></i><span class="js-prog">${progress}</span></p>
                         <p><i class="fa-solid fa-hourglass-half mr-1 text-slate-400"></i>${l.deadline ? fmtDate(l.deadline) : 'Tanpa batas'}</p>
                         <p class="col-span-2"><i class="fa-regular fa-clock mr-1 text-slate-400"></i>Terakhir memilih: <span class="js-upd">${fmtDate(l.updatedAt)}</span></p>
+                        <p class="col-span-2"><i class="fa-solid fa-download mr-1 text-slate-400"></i>Download foto: ${l.dl ? '<b class="text-green-700">Diizinkan</b>' : '<span class="text-slate-500">Tidak diizinkan</span>'}</p>
                         ${l.openedAt ? '' : '<p class="col-span-2 text-slate-400"><i class="fa-regular fa-eye-slash mr-1"></i>Link belum dibuka klien</p>'}
                         ${dur ? `<p class="col-span-2"><i class="fa-solid fa-stopwatch mr-1 text-slate-400"></i>Waktu memilih: <b>${dur}</b></p>` : ''}
                         ${l.hasil ? `<p class="col-span-2 truncate"><i class="fa-solid fa-link mr-1 text-slate-400"></i>Hasil: <a href="${escapeHtml(l.hasil)}" target="_blank" rel="noopener" class="text-blue-600 font-semibold hover:underline">${escapeHtml(l.hasil)}</a></p>` : ''}
@@ -992,6 +1002,7 @@
             document.getElementById('editSub').textContent = (l.name || '(tanpa nama)') + ' · ' + code;
             document.getElementById('editKuota').value = l.kuota || '';
             document.getElementById('editDeadline').value = l.deadline ? toLocalInputValue(new Date(l.deadline)) : '';
+            document.getElementById('editDl').checked = !!l.dl;
             updateEditHints();
             document.getElementById('editModal').classList.remove('hidden');
             setTimeout(() => document.getElementById('editKuota').focus(), 30);
@@ -1015,7 +1026,7 @@
             const k = parseInt(kv, 10);
             const dv = document.getElementById('editDeadline').value;
             const ms = dv ? new Date(dv).getTime() : null;
-            return { kuota: k > 0 ? k : null, kuotaBad: kv !== '' && !(k > 0), deadline: (ms === null || isNaN(ms)) ? null : ms };
+            return { kuota: k > 0 ? k : null, kuotaBad: kv !== '' && !(k > 0), deadline: (ms === null || isNaN(ms)) ? null : ms, dl: document.getElementById('editDl').checked };
         }
         function updateEditHints() {
             const l = currentLinks.find(x => x.code === editCode) || {};
@@ -1039,6 +1050,7 @@
             const changes = [];
             if ((l.kuota || null) !== v.kuota) changes.push('Kuota: <b>' + (l.kuota || 'bebas') + '</b> → <b>' + (v.kuota || 'bebas') + '</b>');
             if ((l.deadline || null) !== v.deadline) changes.push('Batas waktu: <b>' + (l.deadline ? fmtDate(l.deadline) : 'tanpa batas') + '</b> → <b>' + (v.deadline ? fmtDate(v.deadline) : 'tanpa batas') + '</b>');
+            if (!!l.dl !== v.dl) changes.push('Download foto: <b>' + (l.dl ? 'diizinkan' : 'tidak diizinkan') + '</b> → <b>' + (v.dl ? 'diizinkan' : 'tidak diizinkan') + '</b>');
             if (!changes.length) { closeEditModal(); return showAlert('Tidak ada perubahan.'); }
             let warn = '';
             if (v.deadline !== null && v.deadline <= Date.now()) warn += '<p class="mt-2 text-red-600 text-xs font-bold">Batas waktu sudah lewat, klien tidak bisa memilih lagi.</p>';
@@ -1049,7 +1061,7 @@
             const btn = document.getElementById('editSaveBtn');
             btn.disabled = true; btn.classList.add('opacity-60');
             try {
-                if (await updateLinkOnServer(code, { kuota: v.kuota || '', deadline: v.deadline })) { closeEditModal(); showAlert('Link berhasil diperbarui.'); loadLinkList(); }
+                if (await updateLinkOnServer(code, { kuota: v.kuota || '', deadline: v.deadline, dl: v.dl })) { closeEditModal(); showAlert('Link berhasil diperbarui.'); loadLinkList(); }
             } catch (e) { showAlert('Server tidak dapat dihubungi.', true); }
             finally { btn.disabled = false; btn.classList.remove('opacity-60'); }
         }
