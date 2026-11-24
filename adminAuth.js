@@ -73,7 +73,11 @@
             bad_logo: 'Format logo tidak valid (harus PNG, JPG, atau WebP).',
             logo_too_big: 'Logo terlalu besar. Pilih gambar yang lebih sederhana.',
             not_found: 'Link tidak ditemukan di Sheet.',
-            unknown_action: 'Code.gs di server belum versi terbaru. Tempel kode baru lalu Deploy > New version.'
+            bad_email: 'Alamat email notifikasi tidak valid.',
+            no_email: 'Alamat email tujuan tidak ditemukan. Isi email notifikasi.',
+            mail_auth: 'Server belum diizinkan mengirim email. Deploy ulang (Deploy > Manage deployments > Edit > New version) lalu klik Authorize access dan izinkan semua akses.',
+            bad_url: 'Link hasil harus diawali https://',
+            unknown_action: 'kode.gs di server belum versi terbaru. Tempel kode baru lalu Deploy > New version.'
         };
         if (code === 'locked') {
             const m = Math.max(1, Math.ceil(((res && res.retryAfter) || 60) / 60));

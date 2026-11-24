@@ -135,6 +135,17 @@
             height: 10px;
             background-color: #2563eb; /* blue-600 */
         }
+        .prog-steps li { position:relative; text-align:center; font-size:11px; font-weight:700; color:#94a3b8; }
+        .prog-steps li .dot { width:30px; height:30px; margin:0 auto 6px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:#e2e8f0; color:#64748b; font-size:12px; position:relative; z-index:1; }
+        .prog-steps li:not(:first-child)::before { content:''; position:absolute; top:14px; right:50%; width:100%; height:3px; background:#e2e8f0; }
+        .prog-steps li.done .dot, .prog-steps li.now .dot { background:#2563eb; color:#fff; }
+        .prog-steps li.done:not(:first-child)::before, .prog-steps li.now:not(:first-child)::before { background:#2563eb; }
+        .prog-steps li.done, .prog-steps li.now { color:#0f172a; }
+        .prog-steps li.now .dot { box-shadow:0 0 0 5px rgba(37,99,235,.18); }
+        html.dark .prog-steps li .dot { background:#334155; color:#94a3b8; } html.dark .prog-steps li:not(:first-child)::before { background:#334155; }
+        html.dark .prog-steps li.done, html.dark .prog-steps li.now { color:#fff; }
+        html[data-theme] .prog-steps li.done .dot, html[data-theme] .prog-steps li.now .dot { background:var(--acc) !important; color:var(--acct) !important; }
+        html[data-theme] .prog-steps li.done:not(:first-child)::before, html[data-theme] .prog-steps li.now:not(:first-child)::before { background:var(--acc) !important; }
     </style>
     
     <script src="pengaturan.js"></script>
@@ -236,6 +247,21 @@
                 </div>
             </div>
         </section>
+
+        <!-- PROGRES PENGERJAAN (muncul setelah klien mengirim pilihan) -->
+        <div id="progressCard" class="hidden max-w-6xl w-full mx-auto px-4 pt-6">
+            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 md:p-6 shadow-sm">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400" data-i18n="progTitle">Status Pengerjaan</p>
+                        <p id="progHeadline" class="font-bold text-slate-800 dark:text-white text-base md:text-lg mt-0.5"></p>
+                        <p id="progDesc" class="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed"></p>
+                    </div>
+                    <a id="progResult" href="#" target="_blank" rel="noopener" class="hidden shrink-0 items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-sm transition"><i class="fa-solid fa-cloud-arrow-down"></i><span data-i18n="progResultBtn">Lihat &amp; Unduh Hasil</span></a>
+                </div>
+                <ol id="progSteps" class="prog-steps mt-5 grid grid-cols-4 gap-1"></ol>
+            </div>
+        </div>
 
         <!-- BANNER: batas waktu memilih sudah lewat -->
         <div id="lockedBanner" class="hidden max-w-6xl w-full mx-auto px-4 pt-6">
@@ -870,7 +896,7 @@
         function applyLockedState() {
             document.body.classList.add('selection-locked');
             const banner = document.getElementById('lockedBanner');
-            banner.classList.remove('hidden');
+            banner.classList.toggle('hidden', isProcessing());
             const n = appState.selectedMap.size;
             const vendor = getVendorName();
             document.getElementById('lockedDesc').textContent = appState.kuota !== null
@@ -881,6 +907,39 @@
                 if (currentZoomPhoto) updateLightboxSelectBtn();
                 updateGalleryVisuals();
             }
+        }
+
+        // ===== PROGRES PENGERJAAN =====
+        const PROG_STEPS = ['memilih', 'dikirim', 'diedit', 'selesai'];
+        const isProcessing = () => appState.progres === 'diedit' || appState.progres === 'selesai';
+        function renderProgress() {
+            const card = document.getElementById('progressCard');
+            if (!card) return;
+            const pg = appState.progres || 'memilih';
+            if (!appState.remote || pg === 'memilih') { card.classList.add('hidden'); return; }
+            const idx = PROG_STEPS.indexOf(pg);
+            const icons = ['fa-hand-pointer', 'fa-paper-plane', 'fa-wand-magic-sparkles', 'fa-circle-check'];
+            const vendor = getVendorName();
+            document.getElementById('progHeadline').textContent = t('progHead_' + pg);
+            document.getElementById('progDesc').textContent = t('progDesc_' + pg, { vendor, n: appState.selectedMap.size });
+            document.getElementById('progSteps').innerHTML = PROG_STEPS.map((k, i) =>
+                `<li class="${i < idx ? 'done' : i === idx ? 'now' : ''}"><span class="dot"><i class="fa-solid ${i < idx ? 'fa-check' : icons[i]}"></i></span>${escapeHtml(t('progStep_' + k))}</li>`).join('');
+            const res = document.getElementById('progResult');
+            const showRes = pg === 'selesai' && /^https?:\/\//i.test(appState.hasil || '');
+            res.classList.toggle('hidden', !showRes); res.classList.toggle('inline-flex', showRes);
+            if (showRes) res.href = appState.hasil;
+            card.classList.remove('hidden');
+            if (isProcessing()) document.getElementById('lockedBanner').classList.add('hidden');
+        }
+
+        // Klien menekan selesai: beri tahu server (catat waktu, progres -> dikirim, email ke admin)
+        function notifySubmitted() {
+            const r = appState.remote;
+            if (!r) return;
+            const dir = location.href.split('?')[0].split('#')[0].replace(/[^/]*$/, '');
+            serverCall('POST', { action: 'submit', c: r.code, admin: dir + 'generatorLink.html' }).then(res => {
+                if (res && res.ok && res.progres) { appState.progres = res.progres; renderProgress(); }
+            }).catch(() => {});
         }
 
         function startDeadlineTimer() {
@@ -1088,6 +1147,9 @@
             setupQuotaUI();
             appState.deadline = link.deadline || null;
             appState.forceLocked = !!link.closed;
+            appState.progres = link.progres || 'memilih';
+            appState.hasil = link.hasil || '';
+            renderProgress();
 
             if (!appState.remoteApplied) {   // tampilan watermark & proteksi hanya ditetapkan saat awal
                 appState.remoteApplied = true;
@@ -1115,7 +1177,7 @@
             appState.selectedMap = new Map();
             appState.notes = {};
             (sel.items || []).forEach(i => {
-                appState.selectedMap.set(i.id, { id: i.id, name: i.name, folderName: '' });
+                appState.selectedMap.set(i.id, { id: i.id, name: i.name, folderName: i.folder || '' });
                 if (i.note) appState.notes[i.id] = i.note;
             });
             appState.syncedMap = new Map((sel.items || []).map(i => [i.id, i.note || '']));
@@ -1132,7 +1194,7 @@
             let added = 0, removed = 0, noted = 0;
             serverMap.forEach((i, id) => {
                 if (!base.has(id)) {
-                    if (!appState.selectedMap.has(id)) { appState.selectedMap.set(id, { id, name: i.name, folderName: '' }); added++; }
+                    if (!appState.selectedMap.has(id)) { appState.selectedMap.set(id, { id, name: i.name, folderName: i.folder || '' }); added++; }
                     if (i.note && !appState.notes[id]) appState.notes[id] = i.note;
                 } else if ((i.note || '') !== (base.get(id) || '') && appState.selectedMap.has(id) && (appState.notes[id] || '') === (base.get(id) || '')) {
                     if (i.note) appState.notes[id] = i.note; else delete appState.notes[id];
@@ -1253,8 +1315,17 @@
             return Array.from((appState.syncedMap || new Map()).entries()).map(([id, note]) => [id, note || '']);
         }
 
+        // Nama folder yang tersimpan dari versi lama bisa berisi judul galeri ("Koleksi Foto") -> anggap kosong
+        function cleanFolder(v) {
+            v = String(v || '').trim();
+            if (!v) return '';
+            for (const l in TRANSLATIONS) { if (TRANSLATIONS[l].galleryTitle === v) return ''; }
+            return v;
+        }
+        function folderTag(p) { return cleanFolder(p.folderName); }
+
         function remotePayload() {
-            return Array.from(appState.selectedMap.values()).map(p => ({ id: p.id, name: p.name, note: appState.notes[p.id] || '' }));
+            return Array.from(appState.selectedMap.values()).map(p => ({ id: p.id, name: p.name, note: appState.notes[p.id] || '', folder: cleanFolder(p.folderName) }));
         }
 
         function scheduleRemoteSave(delay = 900) {
@@ -1400,10 +1471,12 @@
         async function setupHero(rootFolderId, rootData) {
             try {
                 let pool = rootData.photos.filter(isImageLike);
-                // Foto hanya ada di sub-folder: pakai sub-folder pertama (hasilnya ikut di-cache)
-                if (!pool.length && rootData.folders.length) {
-                    const sub = await getFolderListing(rootData.folders[0].id);
-                    pool = sub.data.photos.filter(isImageLike);
+                // Foto hanya ada di sub-folder (mis. Cam 1 / 01): turun ke sub-folder pertama, maksimal 3 tingkat (hasilnya ikut di-cache)
+                let level = rootData;
+                for (let depth = 0; !pool.length && level.folders.length && depth < 3; depth++) {
+                    const sub = await getFolderListing(level.folders[0].id);
+                    level = sub.data;
+                    pool = level.photos.filter(isImageLike);
                 }
                 if (!pool.length) return;
 
@@ -1424,6 +1497,28 @@
                     wm.classList.remove('hidden');
                 }
             } catch (e) { /* hero hanya pemanis: kalau gagal, latar gradasi tetap tampil */ }
+        }
+
+        // Jumlah total foto termasuk semua sub-folder (maks 4 tingkat). Hasil daftar folder ikut tersimpan di cache,
+        // jadi saat klien membuka folder nanti tidak perlu memuat ulang.
+        let heroCountRun = 0;
+        async function countAllPhotos(rootId, rootData) {
+            const run = ++heroCountRun;
+            let total = rootData.photos.length;
+            let queue = rootData.folders.map(f => ({ id: f.id, depth: 1 }));
+            try {
+                while (queue.length) {
+                    const batch = queue.splice(0, 4);
+                    const results = await Promise.all(batch.map(f => getFolderListing(f.id).then(r => ({ f, d: r.data })).catch(() => null)));
+                    if (run !== heroCountRun) return;
+                    results.forEach(r => {
+                        if (!r) return;
+                        total += r.d.photos.length;
+                        if (r.f.depth < 4) r.d.folders.forEach(sf => queue.push({ id: sf.id, depth: r.f.depth + 1 }));
+                    });
+                    updateHeroCount(total);
+                }
+            } catch (e) { /* jumlah hanya informasi: jika gagal, angka terakhir tetap tampil */ }
         }
 
         function updateHeroCount(n) {
@@ -1574,6 +1669,15 @@
                 lockedTitle: "Batas waktu memilih sudah berakhir",
                 lockedDescQuota: "Anda sudah memilih {n} dari {kuota} foto. Sisa {rest} foto akan dipilihkan oleh {vendor}.",
                 lockedDescFree: "Anda sudah memilih {n} foto. Foto lainnya akan dipilihkan oleh {vendor}.",
+                progTitle: "Status Pengerjaan",
+                progStep_memilih: "Memilih", progStep_dikirim: "Terkirim", progStep_diedit: "Diedit", progStep_selesai: "Selesai",
+                progHead_dikirim: "Pilihan Anda sudah terkirim 🎉",
+                progHead_diedit: "Foto Anda sedang diedit ✨",
+                progHead_selesai: "Foto Anda sudah selesai! 🎊",
+                progDesc_dikirim: "Terima kasih! {vendor} akan segera memproses foto pilihan Anda. Selama belum mulai diedit, pilihan masih bisa diubah.",
+                progDesc_diedit: "{vendor} sedang mengedit foto pilihan Anda. Pilihan foto sudah dikunci.",
+                progDesc_selesai: "Hasil edit foto Anda sudah siap. Terima kasih sudah mempercayakan momen Anda kepada {vendor}.",
+                progResultBtn: "Lihat & Unduh Hasil",
                 alertLocked: "Batas waktu memilih sudah berakhir. Sisa foto akan dipilihkan oleh fotografer.",
                 btnSelectLocked: "Batas waktu berakhir",
                 heroCountLabel: "Galeri",
@@ -1671,6 +1775,15 @@
                 lockedTitle: "The selection deadline has passed",
                 lockedDescQuota: "You selected {n} of {kuota} photos. The remaining {rest} will be chosen by {vendor}.",
                 lockedDescFree: "You selected {n} photos. The rest will be chosen by {vendor}.",
+                progTitle: "Progress",
+                progStep_memilih: "Selecting", progStep_dikirim: "Sent", progStep_diedit: "Editing", progStep_selesai: "Done",
+                progHead_dikirim: "Your selection has been sent 🎉",
+                progHead_diedit: "Your photos are being edited ✨",
+                progHead_selesai: "Your photos are ready! 🎊",
+                progDesc_dikirim: "Thank you! {vendor} will process your selection soon. Until editing starts, you can still change your picks.",
+                progDesc_diedit: "{vendor} is editing your selected photos. Your selection is now locked.",
+                progDesc_selesai: "Your edited photos are ready. Thank you for trusting {vendor} with your moments.",
+                progResultBtn: "View & Download Results",
                 alertLocked: "The selection deadline has passed. The photographer will choose the remaining photos.",
                 btnSelectLocked: "Deadline passed",
                 heroCountLabel: "Gallery",
@@ -1738,6 +1851,7 @@
 
         function applyTranslations() {
             const langData = TRANSLATIONS[appState.lang];
+            try { renderProgress(); } catch (e) {}
             const vendorName = (typeof CONFIG_APP !== 'undefined' && CONFIG_APP.namaVendor) ? CONFIG_APP.namaVendor : 'Studio Foto';
 
             document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -2048,6 +2162,8 @@
 
             const isRoot = (targetFolderId === appState.rootFolderId);
             const displayTitle = isRoot ? TRANSLATIONS[appState.lang].galleryTitle : folderName;
+            // Jalur folder Drive asal foto (mis. "Outdoor/Cam 1"); kosong bila foto ada di folder utama
+            const folderPath = isRoot ? '' : appState.folderHistory.slice(1).map(h => String(h.name || '').trim()).concat([String(folderName || '').trim()]).filter(Boolean).join('/');
             document.getElementById('currentFolderDisplay').innerHTML = isRoot
                 ? displayTitle
                 : `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i> ${escapeHtml(displayTitle)}`;
@@ -2063,7 +2179,7 @@
                 if (data.photos.length > 0 || data.folders.length > 0 || appState.folderHistory.length > 0) {
                     appState.folders = data.folders;
                     appState.photos = data.photos.map(f => ({
-                        id: f.id, name: f.name, w: f.w, h: f.h, folderName: displayTitle
+                        id: f.id, name: f.name, w: f.w, h: f.h, folderName: folderPath
                     }));
                     appState.originalPhotos = [...appState.photos];
 
@@ -2075,6 +2191,7 @@
 
                     if (isRoot) {
                         updateHeroCount(data.photos.length);
+                        if (data.folders.length) countAllPhotos(targetFolderId, data);   // foto di sub-folder (Cam 1/01, dst.) ikut dihitung
                         if (!appState.heroReady) { appState.heroReady = true; setupHero(targetFolderId, data); }
                     }
 
@@ -2238,6 +2355,7 @@
             document.getElementById('confirmWaText').textContent = hasWa ? t('confirmSend') : t('confirmCopy');
             document.getElementById('confirmAsk').classList.add('hidden');
             document.getElementById('confirmDone').classList.remove('hidden');
+            notifySubmitted();
         }
 
         function sendFinalWA() { copyToClipboard(); }
@@ -2316,6 +2434,13 @@
 
                 if (appState.wmMode) {
                     card.appendChild(createWatermarkLayer());
+                }
+
+                if (appState.viewMode === 'selected' && folderTag(photo)) {
+                    const fb = document.createElement('div');
+                    fb.className = 'absolute left-2 bottom-2 z-20 max-w-[85%] truncate bg-slate-900/70 text-white text-[10px] md:text-xs font-semibold px-2 py-1 rounded-md pointer-events-none';
+                    fb.innerHTML = '<i class="fa-solid fa-folder mr-1 text-yellow-300"></i>' + escapeHtml(folderTag(photo));
+                    card.appendChild(fb);
                 }
 
                 const overlay = document.createElement('div');
@@ -2468,7 +2593,7 @@
             
             selectedPhotos.forEach((p, index) => {
                 const note = appState.notes[p.id];
-                textContent += `${index + 1}. ${p.name}\n`;
+                textContent += `${index + 1}. ${p.name}` + (folderTag(p) ? `   [folder: ${folderTag(p)}]` : '') + `\n`;
                 if (note) textContent += `   Catatan: ${note}\n`;
             });
             
@@ -2497,7 +2622,7 @@
             let textToCopy = `*List Foto Pilihan Client*\nLayanan: ${vendor}\nKlien: *${appState.clientName}*\nTotal: ${selectedPhotos.length} Foto\n\n`;
             selectedPhotos.forEach((p, index) => {
                 const note = appState.notes[p.id];
-                textToCopy += `${index + 1}. ${p.name}\n`;
+                textToCopy += `${index + 1}. ${p.name}` + (folderTag(p) ? ` _[folder: ${folderTag(p)}]_` : '') + `\n`;
                 if (note) textToCopy += `   Catatan: ${note}\n`;
             });
             if (appState.deadline !== null && isLocked()) textToCopy += `\n_${t('listLocked').replace(/^Status\s*:\s*/, '')}_\n`;

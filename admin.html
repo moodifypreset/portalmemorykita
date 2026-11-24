@@ -96,6 +96,10 @@
             <input type="checkbox" id="notifToggle" checked onchange="handleNotifToggle()" class="w-4 h-4 rounded accent-blue-600">
             <i class="fa-solid fa-bell text-slate-400"></i> Notifikasi suara & desktop saat proses selesai
         </label>
+        <label class="flex items-center gap-2 mb-4 text-sm text-slate-600 select-none cursor-pointer w-fit">
+            <input type="checkbox" id="keepStruct" checked class="w-4 h-4 rounded accent-blue-600">
+            <i class="fa-solid fa-folder-tree text-slate-400"></i> Pertahankan struktur folder (Indoor / Cam 1 / Cam 2) di folder tujuan
+        </label>
 
         <button id="processBtn" onclick="processFiles()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 mb-6 text-lg">
             <i class="fa-solid fa-bolt"></i> Mulai Sortir & Copy File
@@ -124,6 +128,13 @@
         let destHandle = null;
         // Variabel untuk melacak duplikasi hanya pada SESI INI SAJA
         let sessionCopiedNames = {};
+        let keepStructure = true;
+        // Petunjuk folder per kode foto (dari pilihan klien: asal folder di Google Drive). 'ANY' = tanpa pembatasan
+        let targetHints = {};
+        let deferredMatches = {};
+        // Indeks semua file yang dipindai (untuk diagnosa 'tidak ditemukan')
+        let scanIndex = [];
+        let scanFolderCount = {};
 
         window.addEventListener('DOMContentLoaded', () => {
             // Daftar foto kiriman dari generatorLink.html (tombol "Pakai di RAW Sorter")
@@ -133,7 +144,11 @@
                     localStorage.removeItem('cpSorterImport');
                     const imp = JSON.parse(raw);
                     if (imp && Array.isArray(imp.names) && Date.now() - imp.t < 10 * 60 * 1000) {
-                        const unique = [...new Set(imp.names.map(n => String(n).trim()).filter(Boolean))];
+                        const fl = Array.isArray(imp.folders) ? imp.folders : [];
+                        const unique = [...new Set(imp.names.map((n, i) => {
+                            const nm = String(n).trim(); const fo = String(fl[i] || '').trim();
+                            return nm ? nm + (fo ? '   [folder: ' + fo + ']' : '') : '';
+                        }).filter(Boolean))];
                         document.getElementById('fileList').value = unique.join('\n');
                         const infoEl = document.getElementById('cleanInfo');
                         infoEl.classList.remove('hidden');
@@ -292,6 +307,7 @@
         // FUNGSI PARSER CERDAS (Anti Spasi Siluman WA)
         function parseClientList(rawText) {
             let list = [];
+            targetHints = {};
             const lines = rawText.split('\n');
             
             for (let line of lines) {
@@ -328,6 +344,8 @@
                     }
                 }
 
+                const folderM = cleanName.match(/\[folder\s*:\s*([^\]]*)\]/i);
+                const folderHint = folderM ? folderM[1].trim() : '';
                 cleanName = cleanName.replace(/\s*_?\[folder\s*:.*\]_?/i, '').trim();
                 cleanName = cleanName.replace(/⭐/g, '').trim();
 
@@ -342,6 +360,9 @@
                 
                 if (cleanName && cleanName.length > 1) {
                     list.push(cleanName);
+                    const key = cleanName.replace(/\s+/g, '').toUpperCase();
+                    if (!folderHint) targetHints[key] = 'ANY';
+                    else if (targetHints[key] !== 'ANY') (targetHints[key] = targetHints[key] || []).push(folderHint);
                 }
             }
             
@@ -349,48 +370,85 @@
         }
 
         // FUNGSI PENCARIAN REKURSIF (Mencari terus tanpa henti untuk mendeteksi file beda kamera)
-        async function searchFilesInDirectory(dirHandle, targetList, foundSet, copiedCountRef) {
+        function looseKey(base) {
+            return base.replace(/[^A-Z0-9]/g, '').replace(/^0+/, '');
+        }
+        async function ensureDir(root, parts) {
+            let h = root;
+            for (const p of parts) h = await h.getDirectoryHandle(p, { create: true });
+            return h;
+        }
+        // Apakah file di folder lokal ini cocok dengan folder Drive yang dipilih klien?
+        function hintAllows(fileBaseName, pathParts) {
+            const h = targetHints[fileBaseName];
+            if (!h || h === 'ANY') return true;
+            const local = pathParts.map(x => String(x).trim().toLowerCase());
+            return h.some(hint => {
+                const segs = hint.split('/').map(x => x.trim().toLowerCase()).filter(Boolean);
+                if (!segs.length || segs.length > local.length) return !segs.length;
+                return segs.every((sg, i) => local[local.length - segs.length + i] === sg);
+            });
+        }
+
+        async function copyMatch(entry, folderLabel, pathParts, copiedCountRef, foundSet, fileBaseName, note) {
+            const file = await entry.getFile();
+            let finalSaveName = entry.name;
+            let targetDir = destHandle;
+
+            if (keepStructure) {
+                // Salin dengan struktur folder yang sama seperti sumber -> file berkode sama dari
+                // Indoor / Cam 1 / Cam 2 TIDAK saling bertabrakan dan asal kameranya jelas.
+                targetDir = await ensureDir(destHandle, pathParts);
+                addLog(`Menemukan: ${entry.name} (dari ${folderLabel})${note || ''}`, note ? "warning" : "success");
+            } else {
+                // Mode satu folder: file bernama sama diberi nomor (1), (2), ...
+                const dupKey = entry.name.toUpperCase();
+                if (sessionCopiedNames[dupKey] !== undefined) {
+                    sessionCopiedNames[dupKey]++;
+                    const counter = sessionCopiedNames[dupKey];
+                    const dotIndex = entry.name.lastIndexOf('.');
+                    const baseName = dotIndex !== -1 ? entry.name.substring(0, dotIndex) : entry.name;
+                    const extension = dotIndex !== -1 ? entry.name.substring(dotIndex) : '';
+                    finalSaveName = `${baseName} (${counter})${extension}`;
+                    addLog(`⚠️ Kode sama di folder berbeda! Disalin sbg: ${finalSaveName} (dari ${folderLabel})`, "warning");
+                } else {
+                    sessionCopiedNames[dupKey] = 0;
+                    addLog(`Menemukan: ${entry.name} (dari ${folderLabel})${note || ''}`, note ? "warning" : "success");
+                }
+            }
+
+            const newFileHandle = await targetDir.getFileHandle(finalSaveName, { create: true });
+            const writable = await newFileHandle.createWritable();
+            await writable.write(file);
+            await writable.close();
+
+            copiedCountRef.count++;
+            document.getElementById('progressText').innerText = `${copiedCountRef.count} File Tercopy`;
+            foundSet.add(fileBaseName);
+        }
+
+        async function searchFilesInDirectory(dirHandle, targetList, foundSet, copiedCountRef, pathParts = []) {
+            const folderLabel = '/' + (pathParts.length ? pathParts.join('/') : dirHandle.name);
             for await (const entry of dirHandle.values()) {
                 if (entry.kind === 'file') {
+                    if (entry.name.startsWith('._') || entry.name === '.DS_Store') continue;
                     const fileBaseName = getBaseName(entry.name);
-                    
+                    scanFolderCount[folderLabel] = (scanFolderCount[folderLabel] || 0) + 1;
+                    scanIndex.push({ name: entry.name, folder: folderLabel, loose: looseKey(fileBaseName) });
+
                     if (targetList.includes(fileBaseName)) {
-                        const file = await entry.getFile();
-                        let finalSaveName = entry.name;
-                        
-                        // CEK DUPLIKASI KHUSUS SESI INI (Mendeteksi file bernama sama dari beda sub-folder kamera).
-                        // Kunci dibuat case-insensitive (huruf besar semua) karena banyak sistem operasi
-                        // (Windows, macOS) menganggap "DSC0001.JPG" dan "dsc0001.jpg" sebagai file YANG SAMA
-                        // -> tanpa ini, file kedua bisa diam-diam menimpa file pertama di folder tujuan.
-                        const dupKey = entry.name.toUpperCase();
-                        if (sessionCopiedNames[dupKey] !== undefined) {
-                            sessionCopiedNames[dupKey]++;
-                            const counter = sessionCopiedNames[dupKey];
-                            
-                            const dotIndex = entry.name.lastIndexOf('.');
-                            const baseName = dotIndex !== -1 ? entry.name.substring(0, dotIndex) : entry.name;
-                            const extension = dotIndex !== -1 ? entry.name.substring(dotIndex) : '';
-                            
-                            finalSaveName = `${baseName} (${counter})${extension}`;
-                            addLog(`⚠️ File kamera berbeda! Disalin sbg: ${finalSaveName} (dari /${dirHandle.name})`, "warning");
+                        if (hintAllows(fileBaseName, pathParts)) {
+                            await copyMatch(entry, folderLabel, pathParts, copiedCountRef, foundSet, fileBaseName);
                         } else {
-                            sessionCopiedNames[dupKey] = 0;
-                            addLog(`Menemukan: ${entry.name} (dari folder /${dirHandle.name})`, "success");
+                            // Klien memilih foto ini dari folder Drive lain: simpan dulu, dipakai hanya bila
+                            // foto dari folder yang tepat tidak ditemukan (mis. nama folder lokal berbeda).
+                            (deferredMatches[fileBaseName] = deferredMatches[fileBaseName] || []).push({ entry, folderLabel, pathParts });
                         }
-                        
-                        // Menimpa (overwrite) file jika memang sudah ada dari proses hari sebelumnya
-                        const newFileHandle = await destHandle.getFileHandle(finalSaveName, { create: true });
-                        const writable = await newFileHandle.createWritable();
-                        await writable.write(file);
-                        await writable.close();
-                        
-                        copiedCountRef.count++;
-                        document.getElementById('progressText').innerText = `${copiedCountRef.count} File Tercopy`;
-                        
-                        foundSet.add(fileBaseName);
                     }
                 } else if (entry.kind === 'directory') {
-                    await searchFilesInDirectory(entry, targetList, foundSet, copiedCountRef);
+                    // Jangan memindai folder tujuan bila letaknya di dalam folder sumber
+                    try { if (await entry.isSameEntry(destHandle)) continue; } catch (e) {}
+                    await searchFilesInDirectory(entry, targetList, foundSet, copiedCountRef, [...pathParts, entry.name]);
                 }
             }
         }
@@ -426,16 +484,25 @@
             }
             
             addLog(`Memulai proses sortir untuk ${targetList.length} nama unik...`);
-            addLog(`Sistem akan memindai seluruh sub-folder untuk mencari duplikat antar kamera.`);
+            addLog(`Sistem memindai seluruh sub-folder; bila klien memilih dari folder tertentu (mis. Cam 1), file diambil dari folder yang sama.`);
             
             let copiedCountRef = { count: 0 }; 
             let foundSet = new Set();
             sessionCopiedNames = {}; // RESET pelacak duplikat untuk sesi baru
+            scanIndex = []; scanFolderCount = {}; deferredMatches = {};
+            keepStructure = document.getElementById('keepStruct').checked;
 
             try {
                 // Memindai secara total
                 await searchFilesInDirectory(sourceHandle, targetList, foundSet, copiedCountRef);
 
+                // Cadangan: kode yang foldernya tidak cocok dengan petunjuk klien tapi ada di folder lain -> tetap disalin
+                for (const nm of Object.keys(deferredMatches)) {
+                    if (foundSet.has(nm)) continue;
+                    for (const d of deferredMatches[nm]) {
+                        await copyMatch(d.entry, d.folderLabel, d.pathParts, copiedCountRef, foundSet, nm, ` — folder pilihan klien (${(targetHints[nm] || []).join(', ')}) tidak ada di sumber, disalin dari sini`);
+                    }
+                }
                 const notFoundList = targetList.filter(name => !foundSet.has(name));
 
                 addLog(`----------------------------------------`);
@@ -444,6 +511,15 @@
                 if (notFoundList.length > 0) {
                     addLog(`PERINGATAN: Ada ${notFoundList.length} file yang tidak ditemukan di seluruh folder!`, "error");
                     addLog(`Daftar file tidak ditemukan: ${notFoundList.join(', ')}`, "error");
+                    // DIAGNOSA: tampilkan apa yang sebenarnya ada di folder sumber
+                    const folders = Object.entries(scanFolderCount);
+                    addLog(`DIAGNOSA: ${scanIndex.length} file dipindai di ${folders.length} folder: ` + folders.map(([f, n]) => `${f} (${n})`).join(', '), "warning");
+                    notFoundList.forEach(n => {
+                        const lk = looseKey(n);
+                        const mirip = scanIndex.filter(x => x.loose && x.loose === lk).slice(0, 4);
+                        if (mirip.length) addLog(`Mirip untuk ${n}: ` + mirip.map(x => `${x.name} (${x.folder})`).join(' | ') + ` — nama file tidak persis sama dengan kode di list.`, "warning");
+                        else addLog(`Tidak ada file bernama mirip ${n} di folder sumber yang dipilih. Pastikan Folder Sumber mencakup folder induk (Indoor, Cam 1, Cam 2).`, "warning");
+                    });
                     notifyProcessDone(
                         "Sortir Selesai (Ada yang Terlewat)",
                         `${copiedCountRef.count} file tersalin, ${notFoundList.length} file tidak ditemukan.`

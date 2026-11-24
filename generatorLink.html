@@ -24,6 +24,43 @@
         @keyframes liveFlash { 0% { box-shadow: inset 0 0 0 2px rgba(37,99,235,.55), 0 0 0 0 rgba(37,99,235,.25); } 100% { box-shadow: inset 0 0 0 2px rgba(37,99,235,0), 0 0 0 0 rgba(37,99,235,0); } }
         .live-dot { animation: livePulse 1.4s infinite; }
         @keyframes livePulse { 50% { opacity: .35; } }
+
+        /* Tombol aksi di kartu link klien (warna mengikuti tema lewat variabel theme.css) */
+        .lk-btn { display:inline-flex; align-items:center; justify-content:center; gap:.45rem; height:2.25rem; padding:0 .75rem; border-radius:.6rem; font-size:12px; font-weight:700; white-space:nowrap; transition:filter .15s, box-shadow .15s, transform .1s; }
+        .lk-btn:hover { filter:brightness(.92); }
+        .lk-btn:active, .lk-tool:active { transform:translateY(1px); }
+        .lk-btn span { overflow:hidden; text-overflow:ellipsis; }
+        .lk-dark { background:var(--btn,#0f172a); color:#fff; box-shadow:0 1px 2px rgba(15,23,42,.15); }
+        .lk-pri { background:var(--acc,#2563eb); color:var(--acct,#fff); box-shadow:0 1px 2px rgba(15,23,42,.18); }
+        .lk-tools { border:1px solid var(--border,#e2e8f0); border-radius:.6rem; overflow:hidden; background:var(--surface,#fff); }
+        .lk-tool { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; height:2.1rem; font-size:11.5px; font-weight:600; color:var(--text2,#475569); transition:background-color .15s, color .15s; }
+        .lk-tool + .lk-tool { border-left:1px solid var(--border,#e2e8f0); }
+        .lk-tool i { font-size:12px; opacity:.75; }
+        .lk-tool:hover { background:var(--hover,#f1f5f9); color:var(--text,#0f172a); }
+        .lk-tool:hover i { opacity:1; color:var(--accfg,#2563eb); }
+        .lk-tool.lk-open, .lk-tool.lk-open i { color:var(--accfg,#2563eb); opacity:1; }
+        .lk-tool.lk-del, .lk-tool.lk-del i { color:#e11d48; }
+        .lk-tool.lk-del:hover { background:rgba(244,63,94,.1); }
+        html.dark .lk-tool.lk-del, html.dark .lk-tool.lk-del i { color:#fb7185; }
+        .lk-btn:focus-visible, .lk-tool:focus-visible { outline:2px solid var(--acc,#2563eb); outline-offset:-2px; }
+        @media (max-width: 400px) { .lk-tool i { display:none; } .lk-btn { font-size:11.5px; padding:0 .5rem; } .pg i { display:none; } }
+        .lk-tool.lk-wa i { color:#16a34a; opacity:1; }
+        /* Progres pengerjaan di kartu */
+        .pg-row { border-radius:.6rem; background:var(--surface2,#f8fafc); border:1px solid var(--border,#e2e8f0); padding:3px; gap:3px; }
+        .pg { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; height:1.85rem; border-radius:.45rem; font-size:11px; font-weight:600; color:var(--muted,#64748b); transition:background-color .15s, color .15s; }
+        .pg i { font-size:10.5px; opacity:.7; }
+        .pg:hover { background:var(--hover,#e2e8f0); color:var(--text,#0f172a); }
+        .pg.done { color:var(--accfg,#2563eb); }
+        .pg.done i { opacity:1; }
+        .pg.now { background:var(--acc,#2563eb); color:var(--acct,#fff); box-shadow:0 1px 2px rgba(15,23,42,.15); }
+        .pg.now i { opacity:1; }
+        /* Filter chip */
+        .flt-row::-webkit-scrollbar { display:none; }
+        .flt { flex-shrink:0; display:inline-flex; align-items:center; gap:.35rem; height:1.75rem; padding:0 .65rem; border-radius:999px; border:1px solid var(--border,#e2e8f0); background:var(--surface,#fff); font-size:11px; font-weight:600; color:var(--text2,#475569); white-space:nowrap; transition:all .15s; }
+        .flt span { font-size:10px; font-weight:700; min-width:1.1rem; padding:0 .3rem; border-radius:999px; background:var(--hover,#e2e8f0); color:var(--text2,#475569); text-align:center; }
+        .flt:hover { border-color:var(--acc,#2563eb); color:var(--text,#0f172a); }
+        .flt.on { background:var(--btn,#0f172a); border-color:var(--btn,#0f172a); color:#fff; }
+        .flt.on span { background:rgba(255,255,255,.2); color:#fff; }
     </style>
 </head>
 <body class="text-slate-800 flex flex-col items-center justify-center min-h-screen p-4 py-10 gap-6">
@@ -164,18 +201,134 @@
         <div class="sec-head px-6 py-4 flex items-center justify-between border-b border-slate-200">
             <div>
                 <h2 class="font-bold text-slate-800">Link Klien & Pilihan</h2>
-                <p class="text-[11px] text-slate-500">Lihat siapa yang sudah memilih, perpanjang atau tutup link.</p>
+                <p class="text-[11px] text-slate-500">Pantau pilihan & progres klien, ingatkan, edit, tutup, atau hapus link.</p>
             </div>
-            <button onclick="loadLinkList()" id="btnLoadList" class="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg transition flex items-center gap-2">
+            <button onclick="loadLinkList()" id="btnLoadList" class="shrink-0 whitespace-nowrap px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg transition flex items-center gap-2">
                 <i class="fa-solid fa-rotate-right"></i> Muat Daftar
             </button>
         </div>
-        <div id="linkList" class="divide-y divide-slate-100 max-h-[28rem] lg:max-h-[calc(100vh-11rem)] overflow-y-auto">
+        <!-- Statistik -->
+        <div id="statsBox" class="hidden px-4 pt-4">
+            <div class="stat-wrap rounded-xl border border-slate-200 bg-slate-50 p-3 flex items-center gap-3">
+                <div class="w-10 h-10 shrink-0 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center"><i class="fa-solid fa-stopwatch"></i></div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Rata-rata waktu klien memilih</p>
+                    <p id="statAvg" class="text-lg font-bold text-slate-800 leading-tight">-</p>
+                </div>
+                <div class="text-right text-[11px] text-slate-500 leading-relaxed shrink-0">
+                    <p>Tercepat <b id="statMin" class="text-slate-700">-</b></p>
+                    <p>Terlama <b id="statMax" class="text-slate-700">-</b></p>
+                </div>
+            </div>
+            <p id="statNote" class="text-[10px] text-slate-400 mt-1 px-1"></p>
+        </div>
+        <!-- Cari & filter -->
+        <div id="filterBox" class="hidden px-4 pt-3 pb-3 border-b border-slate-200 space-y-2">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-solid fa-magnifying-glass text-slate-400 text-xs"></i></div>
+                <input type="search" id="listSearch" oninput="onListFilter()" placeholder="Cari nama klien atau kode..." class="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
+            </div>
+            <div id="filterChips" class="flt-row flex gap-1.5 overflow-x-auto pb-0.5"></div>
+        </div>
+        <div id="linkList" class="divide-y divide-slate-100 max-h-[30rem] lg:max-h-[calc(100vh-21rem)] overflow-y-auto">
             <p class="p-6 text-sm text-slate-400 text-center">Klik "Muat Daftar" untuk menampilkan link yang pernah dibuat.</p>
         </div>
     </div>
 
     </div><!-- /grid 2 kolom -->
+
+
+    <!-- Modal: Edit link (kuota & batas waktu) -->
+    <div id="editModal" class="cp-modal hidden fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+        <div class="absolute inset-0 bg-slate-900/60" onclick="closeEditModal()"></div>
+        <div class="relative bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="sec-head px-5 py-4 border-b border-slate-200 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 id="editTitle" class="font-bold text-slate-800"><i class="fa-solid fa-pen-to-square mr-1.5 text-blue-600"></i>Edit Link Klien</h3>
+                    <p id="editSub" class="text-[11px] text-slate-500 truncate"></p>
+                </div>
+                <button type="button" onclick="closeEditModal()" class="text-slate-400 hover:text-slate-700 text-lg leading-none" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label for="editKuota" class="block text-xs font-bold text-slate-700 mb-1.5">Kuota Foto</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-solid fa-shield-halved text-slate-400"></i></div>
+                        <input type="number" min="1" id="editKuota" oninput="updateEditHints()" placeholder="Kosongkan jika bebas" class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
+                    </div>
+                    <p id="editKuotaHint" class="text-[11px] text-slate-500 mt-1"></p>
+                </div>
+                <div>
+                    <label for="editDeadline" class="block text-xs font-bold text-slate-700 mb-1.5">Batas Waktu Memilih</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-solid fa-hourglass-half text-slate-400"></i></div>
+                        <input type="datetime-local" id="editDeadline" oninput="updateEditHints()" class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <button type="button" onclick="setEditDays(1)" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-blue-600 hover:text-blue-600 transition">+1 hari</button>
+                        <button type="button" onclick="setEditDays(3)" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-blue-600 hover:text-blue-600 transition">+3 hari</button>
+                        <button type="button" onclick="setEditDays(7)" class="px-3 py-1.5 text-[11px] font-bold bg-white border border-slate-300 rounded-lg hover:border-blue-600 hover:text-blue-600 transition">+7 hari</button>
+                        <button type="button" onclick="setEditDays(0)" class="px-3 py-1.5 text-[11px] font-bold text-slate-400 hover:text-red-500 transition"><i class="fa-solid fa-xmark"></i> Tanpa batas</button>
+                    </div>
+                    <p id="editDeadlineHint" class="text-[11px] text-slate-500 mt-1"></p>
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-slate-200 flex justify-end gap-2">
+                <button type="button" onclick="closeEditModal()" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-200 transition">Batal</button>
+                <button type="button" id="editSaveBtn" onclick="saveEditLink()" class="px-4 py-2 text-xs font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition"><i class="fa-solid fa-floppy-disk mr-1"></i>Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Ingatkan klien via WhatsApp -->
+    <div id="remindModal" class="cp-modal hidden fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="remindTitle">
+        <div class="absolute inset-0 bg-slate-900/60" onclick="closeRemind()"></div>
+        <div class="relative bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="sec-head px-5 py-4 border-b border-slate-200 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 id="remindTitle" class="font-bold text-slate-800"><i class="fa-brands fa-whatsapp mr-1.5 text-green-600"></i>Ingatkan Klien</h3>
+                    <p id="remindSub" class="text-[11px] text-slate-500 truncate"></p>
+                </div>
+                <button type="button" onclick="closeRemind()" class="text-slate-400 hover:text-slate-700 text-lg leading-none" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label for="remindPhone" class="block text-xs font-bold text-slate-700 mb-1.5">No. WhatsApp Klien</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-solid fa-phone text-slate-400"></i></div>
+                        <input type="tel" id="remindPhone" placeholder="Kosongkan untuk memilih kontak di WhatsApp" class="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label for="remindText" class="block text-xs font-bold text-slate-700 mb-1.5">Pesan (bisa diubah)</label>
+                    <textarea id="remindText" rows="10" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm text-slate-700 focus:border-blue-600 outline-none transition resize-none"></textarea>
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-slate-200 flex justify-end gap-2">
+                <button type="button" onclick="closeRemind()" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-200 transition">Batal</button>
+                <button type="button" onclick="sendRemind()" class="px-4 py-2 text-xs font-bold bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-sm transition"><i class="fa-brands fa-whatsapp mr-1"></i>Buka WhatsApp</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Konfirmasi -->
+    <div id="confirmModal" class="cp-modal hidden fixed inset-0 z-[70] flex items-center justify-center p-4" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <div class="absolute inset-0 bg-slate-900/60" data-cancel></div>
+        <div class="relative bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 p-6 text-center">
+            <div id="confirmIcon" class="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-xl mb-3"></div>
+            <h3 id="confirmTitle" class="font-bold text-slate-800 text-base"></h3>
+            <div id="confirmText" class="text-sm text-slate-600 mt-2 leading-relaxed"></div>
+            <div id="confirmInputBox" class="hidden mt-4 text-left">
+                <label for="confirmInput" id="confirmInputLabel" class="block text-xs font-bold text-slate-700 mb-1.5"></label>
+                <input type="url" id="confirmInput" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
+                <p id="confirmInputHint" class="text-[11px] text-slate-500 mt-1"></p>
+            </div>
+            <div class="mt-5 flex gap-2">
+                <button type="button" data-cancel class="flex-1 px-4 py-2.5 text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-200 transition">Batal</button>
+                <button type="button" id="confirmOk" class="flex-1 px-4 py-2.5 text-xs font-bold text-white rounded-lg shadow-sm transition"></button>
+            </div>
+        </div>
+    </div>
 
     <!-- Alert Notifikasi -->
     <div id="customAlert" class="fixed top-4 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 transition-all duration-300 transform -translate-y-32 opacity-0">
@@ -228,7 +381,7 @@
                     { el: '#clientName', title: 'Nama klien', text: 'Nama ini muncul di halaman klien dan di daftar foto pilihan. Opsional, tapi disarankan.' },
                     { el: '#driveLink', title: 'Folder Google Drive', text: 'Tempel link folder foto klien. Pastikan folder sudah dibagikan sebagai <b>"Siapa saja yang memiliki link"</b>.' },
                     { el: '#btnGenerate', title: 'Buat link', text: 'Tekan untuk membuat link. Anda juga bisa mengatur kuota foto, batas waktu, proteksi, dan watermark sebelumnya.' },
-                    { el: '#linkList', title: 'Link klien & pilihan', text: 'Di sini Anda memantau pilihan klien secara langsung: salin link, perpanjang waktu, atau tutup link. Tombol <b>Pakai di RAW Sorter</b> mengirim daftar foto pilihan langsung ke Auto RAW Sorter.' },
+                    { el: '#linkList', title: 'Link klien & pilihan', text: 'Di sini Anda memantau pilihan klien secara langsung: lihat statistik, cari & filter link, ubah <b>progres</b> (Memilih → Terkirim → Diedit → Selesai), <b>ingatkan</b> klien lewat WA, edit kuota & batas waktu, tutup, atau hapus link. Tombol <b>Pakai di RAW Sorter</b> mengirim daftar foto pilihan langsung ke Auto RAW Sorter.' },
                     { el: '#btnTour', title: 'Butuh bantuan lagi?', text: 'Tekan <b>Tur</b> kapan saja untuk mengulang panduan ini.' }
                 ]
             });
@@ -369,6 +522,7 @@
                 if (!res.ok) return;
                 const st = res.settings || {};
                 settingsComplete = !!(st.namaVendor && st.googleApiKey);
+                studioName = st.namaVendor || '';
                 if (window.Theme) Theme.apply(st.tema || '', true);
                 if (st.waTemplate) { document.getElementById('waTemplate').value = st.waTemplate; saveTemplate(); }
             } catch (e) { /* pakai template tersimpan di browser */ }
@@ -407,7 +561,7 @@
 
         function liveBaseline() {
             live.prev = {};
-            currentLinks.forEach(l => { live.prev[l.code] = { count: l.selectedCount || 0, updatedAt: l.updatedAt || 0, online: undefined }; });
+            currentLinks.forEach(l => { live.prev[l.code] = { count: l.selectedCount || 0, updatedAt: l.updatedAt || 0, online: undefined, sub: l.submittedAt || null }; });
             live.sig = null;   // diisi oleh polling pertama
         }
 
@@ -446,8 +600,19 @@
 
         function liveApply(items, sig) {
             // link baru / status / batas waktu berubah -> muat ulang daftar penuh
-            if (live.sig !== null && sig !== live.sig) { live.sig = sig; loadLinkList(true); return; }
+            const sigChanged = live.sig !== null && sig !== live.sig;
             live.sig = sig;
+            // klien baru saja menekan Kirim (selesai memilih)
+            const subToast = {};
+            Object.keys(items).forEach(code => {
+                const it = items[code], p = live.prev[code];
+                if (p && it.sub && it.sub !== p.sub) {
+                    const l = currentLinks.find(x => x.code === code);
+                    liveToast(code, ((l && l.name) || 'Klien') + ' selesai memilih', 'Pilihan ' + it.count + ' foto sudah dikirim', 'fa-paper-plane');
+                    p.sub = it.sub; subToast[code] = true;
+                }
+            });
+            if (sigChanged) { loadLinkList(true); return; }
             const now = Date.now();
             Object.keys(items).forEach(code => {
                 const it = items[code], p = live.prev[code];
@@ -457,7 +622,7 @@
                 const changed = p && (it.count !== p.count || (it.updatedAt || 0) > (p.updatedAt || 0));
                 if (changed) {
                     live.lastChange = now;
-                    if (it.count !== p.count) {
+                    if (it.count !== p.count && !subToast[code]) {
                         const more = it.count > p.count;
                         liveToast(code, name + (more ? ' sedang memilih foto' : ' mengubah pilihan'), p.count + ' → ' + it.count + ' foto' + (l.kuota ? ' (kuota ' + l.kuota + ')' : ''), 'fa-hand-pointer');
                     }
@@ -473,7 +638,7 @@
                     const on = c.querySelector('.js-online'); if (on) on.classList.toggle('hidden', !(it.online > 0));
                     const sb = c.querySelector('.fa-wand-magic-sparkles'); if (sb && sb.parentNode) sb.parentNode.classList.toggle('opacity-50', !it.count);
                 }
-                live.prev[code] = { count: it.count, updatedAt: it.updatedAt || 0, online: it.online === undefined ? (p ? p.online : undefined) : it.online };
+                live.prev[code] = { count: it.count, updatedAt: it.updatedAt || 0, online: it.online === undefined ? (p ? p.online : undefined) : it.online, sub: it.sub !== undefined ? it.sub : (p ? p.sub : null) };
             });
         }
 
@@ -519,16 +684,98 @@
             liveSchedule();
         }
 
+        // ===== PROGRES, FILTER & STATISTIK =====
+        const PROG = [
+            { k: 'memilih', label: 'Memilih', icon: 'fa-hand-pointer' },
+            { k: 'dikirim', label: 'Terkirim', icon: 'fa-paper-plane' },
+            { k: 'diedit',  label: 'Diedit',   icon: 'fa-wand-magic-sparkles' },
+            { k: 'selesai', label: 'Selesai',  icon: 'fa-circle-check' }
+        ];
+        const FILTERS = [
+            { k: 'semua',   label: 'Semua' },
+            { k: 'aktif',   label: 'Sedang memilih' },
+            { k: 'belum',   label: 'Belum memilih' },
+            { k: 'dikirim', label: 'Terkirim' },
+            { k: 'diedit',  label: 'Diedit' },
+            { k: 'selesai', label: 'Selesai' },
+            { k: 'habis',   label: 'Habis / ditutup' }
+        ];
+        let listFilter = 'semua';
+        try { listFilter = sessionStorage.getItem('cp_list_filter') || 'semua'; } catch (e) {}
+        const progOf = (l) => PROG.some(p => p.k === l.progres) ? l.progres : 'memilih';
+        const isExpired = (l, now) => l.deadline !== null && l.deadline !== undefined && now > l.deadline;
+        function matchFilter(l, f, now) {
+            const pg = progOf(l);
+            switch (f) {
+                case 'aktif':   return pg === 'memilih' && !l.closed && !isExpired(l, now) && (l.selectedCount || 0) > 0;
+                case 'belum':   return pg === 'memilih' && !l.closed && !isExpired(l, now) && !(l.selectedCount || 0);
+                case 'dikirim': case 'diedit': case 'selesai': return pg === f;
+                case 'habis':   return pg === 'memilih' && (l.closed || isExpired(l, now));
+                default:        return true;
+            }
+        }
+        function onListFilter() { renderLinkList(Date.now()); }
+        function setListFilter(k) {
+            listFilter = k;
+            try { sessionStorage.setItem('cp_list_filter', k); } catch (e) {}
+            renderLinkList(Date.now());
+        }
+        function fmtDur(ms) {
+            if (!(ms >= 0)) return '-';
+            const m = Math.round(ms / 60000);
+            if (m < 1) return '< 1 menit';
+            if (m < 60) return m + ' menit';
+            const h = Math.floor(m / 60), mm = m % 60;
+            if (h < 24) return h + ' jam' + (mm ? ' ' + mm + ' menit' : '');
+            const d = Math.floor(h / 24), hh = h % 24;
+            return d + ' hari' + (hh ? ' ' + hh + ' jam' : '');
+        }
+        function renderStats() {
+            const durs = currentLinks.filter(l => l.openedAt && l.submittedAt && l.submittedAt >= l.openedAt).map(l => l.submittedAt - l.openedAt);
+            document.getElementById('statsBox').classList.toggle('hidden', !currentLinks.length);
+            if (!durs.length) {
+                document.getElementById('statAvg').textContent = 'Belum ada data';
+                document.getElementById('statMin').textContent = '-'; document.getElementById('statMax').textContent = '-';
+                document.getElementById('statNote').textContent = 'Dihitung otomatis setelah klien membuka link lalu menekan Kirim.';
+                return;
+            }
+            const avg = durs.reduce((x, y) => x + y, 0) / durs.length;
+            document.getElementById('statAvg').textContent = fmtDur(avg);
+            document.getElementById('statMin').textContent = fmtDur(Math.min(...durs));
+            document.getElementById('statMax').textContent = fmtDur(Math.max(...durs));
+            document.getElementById('statNote').textContent = 'Dari ' + durs.length + ' klien · dihitung sejak klien pertama membuka link sampai menekan Kirim.';
+        }
+        function renderFilterChips(now) {
+            const box = document.getElementById('filterChips');
+            box.innerHTML = FILTERS.map(f => {
+                const n = currentLinks.filter(l => matchFilter(l, f.k, now)).length;
+                return `<button type="button" onclick="setListFilter('${f.k}')" class="flt ${listFilter === f.k ? 'on' : ''}">${f.label}<span>${n}</span></button>`;
+            }).join('');
+        }
+
         function renderLinkList(now) {
             const box = document.getElementById('linkList');
+            document.getElementById('filterBox').classList.toggle('hidden', !currentLinks.length);
+            renderStats();
             if (!currentLinks.length) { box.innerHTML = '<p class="p-6 text-sm text-slate-400 text-center">Belum ada link.</p>'; return; }
-            box.innerHTML = currentLinks.map(l => {
-                const expired = l.deadline !== null && now > l.deadline;
+            renderFilterChips(now);
+            const q = (document.getElementById('listSearch').value || '').trim().toLowerCase();
+            const shown = currentLinks.filter(l => matchFilter(l, listFilter, now) && (!q || (l.name || '').toLowerCase().includes(q) || (l.code || '').toLowerCase().includes(q)));
+            if (!shown.length) { box.innerHTML = '<p class="p-6 text-sm text-slate-400 text-center">Tidak ada link yang cocok.</p>'; return; }
+            box.innerHTML = shown.map(l => {
+                const expired = isExpired(l, now);
+                const pg = progOf(l);
                 let state, tone;
-                if (l.closed) { state = 'Ditutup'; tone = 'bg-slate-100 text-slate-600'; }
+                if (pg === 'selesai') { state = 'Selesai'; tone = 'bg-green-100 text-green-700'; }
+                else if (pg === 'diedit') { state = 'Diedit'; tone = 'bg-blue-100 text-blue-700'; }
+                else if (pg === 'dikirim') { state = 'Terkirim'; tone = 'bg-amber-100 text-amber-700'; }
+                else if (l.closed) { state = 'Ditutup'; tone = 'bg-slate-100 text-slate-600'; }
                 else if (expired) { state = 'Waktu habis'; tone = 'bg-red-100 text-red-700'; }
                 else { state = 'Aktif'; tone = 'bg-green-100 text-green-700'; }
                 const progress = l.kuota ? `${l.selectedCount} / ${l.kuota} foto` : `${l.selectedCount} foto`;
+                const pIdx = PROG.findIndex(p => p.k === pg);
+                const steps = PROG.map((p, i) => `<button type="button" onclick="setProgres('${l.code}','${p.k}')" class="pg ${i < pIdx ? 'done' : i === pIdx ? 'now' : ''}" title="Ubah progres ke ${p.label}"><i class="fa-solid ${i < pIdx ? 'fa-check' : p.icon}"></i><span>${p.label}</span></button>`).join('');
+                const dur = (l.openedAt && l.submittedAt && l.submittedAt >= l.openedAt) ? fmtDur(l.submittedAt - l.openedAt) : '';
                 return `<div class="p-4 space-y-2" data-code="${l.code}">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
@@ -540,19 +787,102 @@
                             <span class="js-online text-[10px] font-bold text-green-700 ${l.online > 0 ? '' : 'hidden'}"><span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mr-1 live-dot"></span>Klien online</span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-slate-600">
                         <p><i class="fa-solid fa-images mr-1 text-slate-400"></i><span class="js-prog">${progress}</span></p>
                         <p><i class="fa-solid fa-hourglass-half mr-1 text-slate-400"></i>${l.deadline ? fmtDate(l.deadline) : 'Tanpa batas'}</p>
                         <p class="col-span-2"><i class="fa-regular fa-clock mr-1 text-slate-400"></i>Terakhir memilih: <span class="js-upd">${fmtDate(l.updatedAt)}</span></p>
+                        ${l.openedAt ? '' : '<p class="col-span-2 text-slate-400"><i class="fa-regular fa-eye-slash mr-1"></i>Link belum dibuka klien</p>'}
+                        ${dur ? `<p class="col-span-2"><i class="fa-solid fa-stopwatch mr-1 text-slate-400"></i>Waktu memilih: <b>${dur}</b></p>` : ''}
+                        ${l.hasil ? `<p class="col-span-2 truncate"><i class="fa-solid fa-link mr-1 text-slate-400"></i>Hasil: <a href="${escapeHtml(l.hasil)}" target="_blank" rel="noopener" class="text-blue-600 font-semibold hover:underline">${escapeHtml(l.hasil)}</a></p>` : ''}
                     </div>
-                    <div class="flex flex-wrap gap-2 pt-1">
-                        <button onclick="copyClientLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-slate-900 text-white rounded-lg hover:bg-black shadow-sm transition"><i class="fa-solid fa-copy mr-1"></i>Salin Link</button>
-                        <button onclick="sendToSorter('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition ${l.selectedCount ? '' : 'opacity-50'}" title="Kirim daftar foto pilihan klien langsung ke Auto RAW Sorter"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Pakai di RAW Sorter</button>
-                        <button onclick="extendLink('${l.code}')" class="px-3 py-1.5 text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-200 transition"><i class="fa-solid fa-calendar-plus mr-1"></i>Perpanjang</button>
-                        <button onclick="toggleLinkClosed('${l.code}', ${l.closed ? 'false' : 'true'})" class="px-3 py-1.5 text-[11px] font-bold bg-white border ${l.closed ? 'border-blue-300 text-blue-700 hover:bg-blue-50' : 'border-rose-300 text-rose-700 hover:bg-rose-50'} rounded-lg transition"><i class="fa-solid ${l.closed ? 'fa-lock-open' : 'fa-lock'} mr-1"></i>${l.closed ? 'Buka Lagi' : 'Tutup Sekarang'}</button>
+                    <div class="pg-row grid grid-cols-4">${steps}</div>
+                    <div class="lk-actions pt-1 space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="copyClientLink('${l.code}')" class="lk-btn lk-dark"><i class="fa-solid fa-copy"></i><span>Salin Link</span></button>
+                            <button onclick="sendToSorter('${l.code}')" class="lk-btn lk-pri ${l.selectedCount ? '' : 'opacity-50 cursor-not-allowed'}" title="Kirim daftar foto pilihan klien langsung ke Auto RAW Sorter"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Pakai di RAW Sorter</span></button>
+                        </div>
+                        <div class="lk-tools grid grid-cols-4">
+                            <button onclick="openEditLink('${l.code}')" class="lk-tool" title="Edit kuota & batas waktu"><i class="fa-solid fa-pen-to-square"></i><span>Edit</span></button>
+                            <button onclick="openRemind('${l.code}')" class="lk-tool lk-wa" title="Ingatkan klien lewat WhatsApp"><i class="fa-brands fa-whatsapp"></i><span>Ingatkan</span></button>
+                            <button onclick="toggleLinkClosed('${l.code}', ${l.closed ? 'false' : 'true'})" class="lk-tool ${l.closed ? 'lk-open' : ''}" title="${l.closed ? 'Buka link lagi' : 'Tutup link sekarang'}"><i class="fa-solid ${l.closed ? 'fa-lock-open' : 'fa-lock'}"></i><span>${l.closed ? 'Buka' : 'Tutup'}</span></button>
+                            <button onclick="deleteLink('${l.code}')" class="lk-tool lk-del" title="Hapus link"><i class="fa-solid fa-trash-can"></i><span>Hapus</span></button>
+                        </div>
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // Ubah progres pengerjaan (dengan konfirmasi). Selesai: bisa menyertakan link hasil foto.
+        async function setProgres(code, pg) {
+            const l = currentLinks.find(x => x.code === code);
+            if (!l) return;
+            const cur = progOf(l);
+            const P = PROG.find(p => p.k === pg);
+            if (pg === cur && pg !== 'selesai') return;
+            const who = '<b>' + escapeHtml(l.name || code) + '</b>';
+            const desc = {
+                memilih: 'Klien ' + who + ' bisa memilih & mengubah pilihan lagi.',
+                dikirim: 'Tandai pilihan ' + who + ' sudah diterima. Klien masih bisa mengubah pilihan.',
+                diedit: 'Klien ' + who + ' akan melihat status <b>Sedang diedit</b> dan pilihannya <b>dikunci</b>.',
+                selesai: 'Klien ' + who + ' akan melihat status <b>Selesai</b>. Isi link hasil foto agar klien bisa langsung mengunduh.'
+            }[pg];
+            const ans = await askConfirm({
+                title: pg === cur ? 'Ubah link hasil?' : 'Ubah progres ke "' + P.label + '"?',
+                html: desc, okText: 'Ya, Simpan', icon: P.icon,
+                input: pg === 'selesai' ? { label: 'Link hasil foto (opsional)', placeholder: 'https://drive.google.com/...', value: l.hasil || '', hint: 'Mis. folder Google Drive berisi foto yang sudah diedit.' } : null
+            });
+            if (!ans) return;
+            const fields = { progres: pg };
+            if (pg === 'selesai') {
+                const h = ans.value || '';
+                if (h && !/^https?:\/\/\S{3,}$/i.test(h)) return showAlert('Link hasil harus diawali https://', true);
+                fields.hasil = h;
+            }
+            try {
+                const res = await Admin.call(Object.assign({ action: 'updateLink', c: code }, fields));
+                if (!res.ok) {
+                    if (res.error === 'unknown_action' || res.error === 'bad_request') return showAlert('Fitur progres butuh kode.gs terbaru. Tempel kode baru lalu Deploy > New version.', true);
+                    if (res.error !== 'unauthorized') showAlert(serverErrorText(res.error, res), true);
+                    return;
+                }
+                Object.assign(l, fields);
+                renderLinkList(Date.now());
+                showAlert('Progres diubah ke ' + P.label + '.');
+                loadLinkList(true);
+            } catch (e) { showAlert('Server tidak dapat dihubungi.', true); }
+        }
+
+        // ===== INGATKAN KLIEN (WhatsApp) =====
+        let remindCode = null, studioName = '';
+        function remindMessage(l) {
+            const now = Date.now();
+            const lines = ['Halo ' + (l.name || 'Kak') + ' 👋', '', 'Sekadar mengingatkan untuk memilih foto di link berikut ya:', clientLinkFor(l.code), ''];
+            const n = l.selectedCount || 0;
+            if (!n) lines.push('Saat ini belum ada foto yang dipilih.');
+            else lines.push('Saat ini sudah terpilih ' + n + (l.kuota ? ' dari ' + l.kuota : '') + ' foto.');
+            if (l.deadline && l.deadline > now) lines.push('Batas waktu memilih: ' + fmtDate(l.deadline) + ' (sisa ' + fmtDur(l.deadline - now) + ').');
+            lines.push('', 'Jika sudah selesai, tekan tombol *Kirim WA* di halaman tersebut ya.', '', 'Terima kasih 🙏');
+            if (studioName) lines.push(studioName);
+            return lines.join('\n');
+        }
+        function openRemind(code) {
+            const l = currentLinks.find(x => x.code === code);
+            if (!l) return;
+            remindCode = code;
+            document.getElementById('remindSub').textContent = (l.name || '(tanpa nama)') + ' · ' + code;
+            document.getElementById('remindPhone').value = l.phone || '';
+            document.getElementById('remindText').value = remindMessage(l);
+            document.getElementById('remindModal').classList.remove('hidden');
+        }
+        function closeRemind() { document.getElementById('remindModal').classList.add('hidden'); remindCode = null; }
+        function sendRemind() {
+            let ph = document.getElementById('remindPhone').value.replace(/[^0-9]/g, '');
+            if (ph.startsWith('0')) ph = '62' + ph.slice(1); else if (ph.startsWith('8')) ph = '62' + ph;
+            const txt = document.getElementById('remindText').value.trim();
+            if (!txt) return showAlert('Pesan tidak boleh kosong.', true);
+            const url = 'https://api.whatsapp.com/send?' + (ph ? 'phone=' + ph + '&' : '') + 'text=' + encodeURIComponent(txt);
+            window.open(url, '_blank');
+            closeRemind();
         }
 
         // Ambil daftar foto pilihan klien dari server lalu buka Auto RAW Sorter dengan daftar sudah terisi
@@ -567,7 +897,7 @@
                     return showAlert('Klien ini belum memilih foto.', true);
                 }
                 localStorage.setItem('cpSorterImport', JSON.stringify({
-                    name: link.name || '', code: code, t: Date.now(), names: items.map(i => i.name)
+                    name: link.name || '', code: code, t: Date.now(), names: items.map(i => i.name), folders: items.map(i => i.folder || '')
                 }));
                 if (tab) tab.location.href = 'admin.html'; else location.href = 'admin.html';
             } catch (e) {
@@ -604,10 +934,157 @@
         }
 
         async function toggleLinkClosed(code, close) {
+            const l = currentLinks.find(x => x.code === code) || {};
+            const who = '<b>' + escapeHtml(l.name || code) + '</b>';
+            const ok = await askConfirm(close
+                ? { title: 'Tutup link ini?', html: 'Klien ' + who + ' tidak bisa memilih foto lagi sampai link dibuka kembali.', okText: 'Ya, Tutup', tone: 'danger', icon: 'fa-lock' }
+                : { title: 'Buka link lagi?', html: 'Klien ' + who + ' bisa memilih foto kembali.', okText: 'Ya, Buka', icon: 'fa-lock-open' });
+            if (!ok) return;
             try {
                 if (await updateLinkOnServer(code, { status: close ? 'tutup' : 'aktif' })) { showAlert(close ? 'Link ditutup.' : 'Link dibuka kembali.'); loadLinkList(); }
             } catch (e) { showAlert('Server tidak dapat dihubungi.', true); }
         }
+
+
+        // ===== KONFIRMASI (dipakai untuk edit, hapus, tutup/buka link) =====
+        function askConfirm(opt) {
+            const m = document.getElementById('confirmModal');
+            const danger = opt.tone === 'danger';
+            document.getElementById('confirmTitle').textContent = opt.title;
+            document.getElementById('confirmText').innerHTML = opt.html || '';
+            const ic = document.getElementById('confirmIcon');
+            ic.className = 'w-12 h-12 mx-auto rounded-full flex items-center justify-center text-xl mb-3 ' + (danger ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600');
+            ic.innerHTML = '<i class="fa-solid ' + (opt.icon || (danger ? 'fa-triangle-exclamation' : 'fa-circle-question')) + '"></i>';
+            const ok = document.getElementById('confirmOk');
+            ok.textContent = opt.okText || 'Ya, Lanjutkan';
+            ok.className = 'flex-1 px-4 py-2.5 text-xs font-bold text-white rounded-lg shadow-sm transition ' + (danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700');
+            const ib = document.getElementById('confirmInputBox'), inp = document.getElementById('confirmInput');
+            ib.classList.toggle('hidden', !opt.input);
+            if (opt.input) {
+                document.getElementById('confirmInputLabel').textContent = opt.input.label || '';
+                document.getElementById('confirmInputHint').textContent = opt.input.hint || '';
+                inp.placeholder = opt.input.placeholder || ''; inp.value = opt.input.value || '';
+            }
+            m.classList.remove('hidden');
+            setTimeout(() => (opt.input ? inp : ok).focus(), 30);
+            return new Promise(resolve => {
+                const done = (v) => {
+                    m.classList.add('hidden');
+                    ok.onclick = null;
+                    m.querySelectorAll('[data-cancel]').forEach(b => b.onclick = null);
+                    document.removeEventListener('keydown', onKey, true);
+                    resolve(v);
+                };
+                const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(false); } };
+                ok.onclick = () => done(opt.input ? { value: inp.value.trim() } : true);
+                inp.onkeydown = opt.input ? (e) => { if (e.key === 'Enter') { e.preventDefault(); ok.click(); } } : null;
+                m.querySelectorAll('[data-cancel]').forEach(b => b.onclick = () => done(false));
+                document.addEventListener('keydown', onKey, true);
+            });
+        }
+
+        // ===== EDIT LINK: kuota & batas waktu =====
+        let editCode = null;
+        function openEditLink(code) {
+            const l = currentLinks.find(x => x.code === code);
+            if (!l) return;
+            editCode = code;
+            document.getElementById('editSub').textContent = (l.name || '(tanpa nama)') + ' · ' + code;
+            document.getElementById('editKuota').value = l.kuota || '';
+            document.getElementById('editDeadline').value = l.deadline ? toLocalInputValue(new Date(l.deadline)) : '';
+            updateEditHints();
+            document.getElementById('editModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('editKuota').focus(), 30);
+        }
+        function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); editCode = null; }
+        function setEditDays(days) {
+            const input = document.getElementById('editDeadline');
+            if (!days) input.value = '';
+            else {
+                // ditambahkan dari batas lama jika masih berlaku, kalau tidak dari hari ini; jatuh pukul 23:59
+                const l = currentLinks.find(x => x.code === editCode) || {};
+                const cur = input.value ? new Date(input.value).getTime() : (l.deadline || 0);
+                const d = new Date(Math.max(cur || 0, Date.now()));
+                d.setDate(d.getDate() + days); d.setHours(23, 59, 0, 0);
+                input.value = toLocalInputValue(d);
+            }
+            updateEditHints();
+        }
+        function editValues() {
+            const kv = document.getElementById('editKuota').value.trim();
+            const k = parseInt(kv, 10);
+            const dv = document.getElementById('editDeadline').value;
+            const ms = dv ? new Date(dv).getTime() : null;
+            return { kuota: k > 0 ? k : null, kuotaBad: kv !== '' && !(k > 0), deadline: (ms === null || isNaN(ms)) ? null : ms };
+        }
+        function updateEditHints() {
+            const l = currentLinks.find(x => x.code === editCode) || {};
+            const v = editValues();
+            const kh = document.getElementById('editKuotaHint');
+            const sel = l.selectedCount || 0;
+            if (v.kuotaBad) { kh.textContent = 'Isi angka lebih dari 0, atau kosongkan agar bebas.'; kh.className = 'text-[11px] text-red-600 mt-1'; }
+            else if (v.kuota && sel > v.kuota) { kh.textContent = 'Klien sudah memilih ' + sel + ' foto, lebih banyak dari kuota baru.'; kh.className = 'text-[11px] text-amber-600 mt-1'; }
+            else { kh.textContent = 'Sudah dipilih: ' + sel + ' foto. ' + (v.kuota ? 'Sisa kuota: ' + (v.kuota - sel) + ' foto.' : 'Tanpa batas jumlah.'); kh.className = 'text-[11px] text-slate-500 mt-1'; }
+            const dh = document.getElementById('editDeadlineHint');
+            if (v.deadline === null) { dh.textContent = 'Tanpa batas waktu.'; dh.className = 'text-[11px] text-slate-500 mt-1'; }
+            else if (v.deadline <= Date.now()) { dh.textContent = 'Waktu ini sudah lewat, klien tidak akan bisa memilih.'; dh.className = 'text-[11px] text-red-600 mt-1'; }
+            else { dh.textContent = 'Berakhir ' + formatDeadline(v.deadline); dh.className = 'text-[11px] text-slate-500 mt-1'; }
+        }
+        async function saveEditLink() {
+            const code = editCode;
+            const l = currentLinks.find(x => x.code === code);
+            if (!l) return closeEditModal();
+            const v = editValues();
+            if (v.kuotaBad) return showAlert('Kuota harus angka lebih dari 0, atau kosongkan.', true);
+            const changes = [];
+            if ((l.kuota || null) !== v.kuota) changes.push('Kuota: <b>' + (l.kuota || 'bebas') + '</b> → <b>' + (v.kuota || 'bebas') + '</b>');
+            if ((l.deadline || null) !== v.deadline) changes.push('Batas waktu: <b>' + (l.deadline ? fmtDate(l.deadline) : 'tanpa batas') + '</b> → <b>' + (v.deadline ? fmtDate(v.deadline) : 'tanpa batas') + '</b>');
+            if (!changes.length) { closeEditModal(); return showAlert('Tidak ada perubahan.'); }
+            let warn = '';
+            if (v.deadline !== null && v.deadline <= Date.now()) warn += '<p class="mt-2 text-red-600 text-xs font-bold">Batas waktu sudah lewat, klien tidak bisa memilih lagi.</p>';
+            if (v.kuota && (l.selectedCount || 0) > v.kuota) warn += '<p class="mt-2 text-amber-600 text-xs font-bold">Pilihan klien (' + l.selectedCount + ' foto) melebihi kuota baru.</p>';
+            if (l.closed) warn += '<p class="mt-2 text-slate-500 text-xs">Link ini masih <b>ditutup</b>. Klik "Buka Lagi" agar klien bisa memilih.</p>';
+            const ok = await askConfirm({ title: 'Simpan perubahan?', html: '<p class="text-left inline-block">' + changes.join('<br>') + '</p>' + warn, okText: 'Ya, Simpan', icon: 'fa-pen-to-square' });
+            if (!ok) return;
+            const btn = document.getElementById('editSaveBtn');
+            btn.disabled = true; btn.classList.add('opacity-60');
+            try {
+                if (await updateLinkOnServer(code, { kuota: v.kuota || '', deadline: v.deadline })) { closeEditModal(); showAlert('Link berhasil diperbarui.'); loadLinkList(); }
+            } catch (e) { showAlert('Server tidak dapat dihubungi.', true); }
+            finally { btn.disabled = false; btn.classList.remove('opacity-60'); }
+        }
+
+        // ===== HAPUS LINK =====
+        async function deleteLink(code) {
+            const l = currentLinks.find(x => x.code === code) || {};
+            const sel = l.selectedCount || 0;
+            const ok = await askConfirm({
+                title: 'Hapus link ini?',
+                html: 'Link <b>' + escapeHtml(l.name || '(tanpa nama)') + '</b> <span class="font-mono text-xs">(' + escapeHtml(code) + ')</span> akan dihapus permanen' +
+                    (sel ? ' beserta <b>' + sel + ' foto pilihan</b> klien' : '') + '.<br><span class="text-red-600 font-bold text-xs">Klien tidak bisa membuka link ini lagi dan tindakan ini tidak bisa dibatalkan.</span>',
+                okText: 'Ya, Hapus', tone: 'danger', icon: 'fa-trash-can'
+            });
+            if (!ok) return;
+            try {
+                const res = await Admin.call({ action: 'deleteLink', c: code });
+                if (!res.ok && res.error !== 'not_found') {
+                    if (res.error === 'unknown_action') return showAlert('Fitur hapus butuh kode.gs terbaru. Tempel kode baru lalu Deploy > New version.', true);
+                    if (res.error !== 'unauthorized') showAlert(serverErrorText(res.error, res), true);
+                    return;
+                }
+                currentLinks = currentLinks.filter(x => x.code !== code);
+                delete live.prev[code];
+                renderLinkList(Date.now());
+                try { localStorage.setItem(LIST_CACHE, JSON.stringify({ links: currentLinks })); } catch (e) {}
+                showAlert('Link dihapus.');
+                loadLinkList(true);
+            } catch (e) { showAlert('Server tidak dapat dihubungi.', true); }
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('editModal').classList.contains('hidden') && document.getElementById('confirmModal').classList.contains('hidden')) closeEditModal();
+            if (e.key === 'Escape' && !document.getElementById('remindModal').classList.contains('hidden')) closeRemind();
+            if (e.key === 'Enter' && !document.getElementById('editModal').classList.contains('hidden') && document.getElementById('confirmModal').classList.contains('hidden') && e.target.tagName === 'INPUT') { e.preventDefault(); saveEditLink(); }
+        });
 
         function getMessageTemplate(name, link) {
             let template = document.getElementById('waTemplate').value;
