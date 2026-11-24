@@ -62,8 +62,28 @@
         .pg.done i { opacity:1; }
         .pg.now { background:var(--acc,#2563eb); color:var(--acct,#fff); box-shadow:0 1px 2px rgba(15,23,42,.15); }
         .pg.now i { opacity:1; }
+        /* Kartu opsi (Proteksi Hak Cipta & akses klien) */
+        .opt-card { background:var(--surface2,#f8fafc); border:1px solid var(--border,#e2e8f0); border-radius:1rem; padding:1rem; }
+        .opt-head { display:flex; align-items:center; gap:.6rem; }
+        .opt-head .opt-ic { background:var(--acc,#2563eb); color:var(--acct,#fff); }
+        .opt-title { font-size:.85rem; font-weight:800; color:var(--text,#0f172a); line-height:1.2; }
+        .opt-sub { font-size:11px; color:var(--muted,#64748b); margin-top:.1rem; }
+        .opt-group { margin:.9rem 0 .4rem; font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted,#64748b); }
+        .opt { display:flex; align-items:center; gap:.75rem; padding:.7rem .8rem; border:1px solid var(--border,#e2e8f0); background:var(--surface,#fff); border-radius:.8rem; cursor:pointer; transition:border-color .15s, background-color .15s; }
+        .opt + .opt, .opt + .opt-extra, .opt-extra + .opt { margin-top:.5rem; }
+        .opt:hover { border-color:var(--acc,#2563eb); }
+        .opt-ic { width:2rem; height:2rem; flex-shrink:0; border-radius:.6rem; background:var(--hover,#e2e8f0); color:var(--text2,#475569); display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; }
+        .opt-tx { flex:1 1 auto; min-width:0; display:block; font-size:.8rem; font-weight:700; color:var(--text,#0f172a); line-height:1.25; }
+        .opt-tx small { display:block; margin-top:.15rem; font-size:11px; font-weight:400; line-height:1.35; color:var(--muted,#64748b); }
+        .opt-sw { -webkit-appearance:none; appearance:none; flex-shrink:0; position:relative; width:2.4rem; height:1.4rem; border-radius:999px; background:#cbd5e1; cursor:pointer; transition:background-color .15s; margin:0; border:0; }
+        .opt-sw::after { content:''; position:absolute; top:.2rem; left:.2rem; width:1rem; height:1rem; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.3); transition:transform .15s; }
+        .opt-sw:checked { background:var(--acc,#2563eb); }
+        .opt-sw:checked::after { transform:translateX(1rem); }
+        .opt-sw:focus-visible { outline:2px solid var(--acc,#2563eb); outline-offset:2px; }
+        .opt-extra { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; padding:.1rem .2rem 0 3.35rem; }
+        .opt-extra.hidden { display:none; }
+        @media (max-width: 420px) { .opt { padding:.65rem .6rem; gap:.6rem; } .opt-extra { padding-left:.2rem; } }
         /* Filter chip */
-        .flt-row::-webkit-scrollbar { display:none; }
         .flt { flex-shrink:0; display:inline-flex; align-items:center; gap:.35rem; height:1.75rem; padding:0 .65rem; border-radius:999px; border:1px solid var(--border,#e2e8f0); background:var(--surface,#fff); font-size:11px; font-weight:600; color:var(--text2,#475569); white-space:nowrap; transition:all .15s; }
         .flt span { font-size:10px; font-weight:700; min-width:1.1rem; padding:0 .3rem; border-radius:999px; background:var(--hover,#e2e8f0); color:var(--text2,#475569); text-align:center; }
         .flt:hover { border-color:var(--acc,#2563eb); color:var(--text,#0f172a); }
@@ -155,31 +175,39 @@
                 </div>
             </div>
 
-            <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 space-y-3">
-                <label class="block text-xs font-bold text-blue-800 border-b border-blue-200 pb-2 mb-2"><i class="fa-solid fa-lock mr-1"></i> Proteksi Hak Cipta</label>
-                <div class="flex flex-col gap-3">
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" id="protCheck" checked class="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
-                        <span class="text-sm font-medium text-slate-700">Anti-Save & Blackout (Blokir Tahan Layar & Layar Hitam saat buka Snipping Tool)</span>
-                    </label>
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" id="wmCheck" checked class="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
-                        <span class="text-sm font-medium text-slate-700">Tampilkan Watermark (Nama Vendor) di atas foto</span>
-                    </label>
-                    <label class="flex items-start gap-3 cursor-pointer pt-3 border-t border-blue-200">
-                        <input type="checkbox" id="dlCheck" class="w-4 h-4 mt-0.5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
-                        <span class="text-sm font-medium text-slate-700">Izinkan klien mengunduh foto <span class="block text-[11px] font-normal text-slate-500">Tombol "Unduh" muncul di portal klien (resolusi asli). Bisa diubah kapan saja lewat tombol Edit. Kalau tidak dicentang, klien hanya bisa melihat & memilih.</span></span>
-                    </label>
-                    <div class="pt-3 border-t border-blue-200">
-                        <label class="flex items-start gap-3 cursor-pointer">
-                            <input type="checkbox" id="pinCheck" onchange="togglePinField('pinCheck','pinBox','pinValue')" class="w-4 h-4 mt-0.5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500">
-                            <span class="text-sm font-medium text-slate-700">Pasang PIN pada link (opsional) <span class="block text-[11px] font-normal text-slate-500">Klien harus memasukkan PIN sebelum galeri terbuka. Kirim PIN terpisah atau ikut di pesan. Bisa diubah atau dihapus lewat tombol Edit.</span></span>
-                        </label>
-                        <div id="pinBox" class="hidden mt-2 flex items-center gap-2 pl-7">
-                            <input id="pinValue" type="text" inputmode="numeric" maxlength="8" placeholder="4–8 angka" class="w-32 text-center font-mono font-bold tracking-widest bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-600">
-                            <button type="button" onclick="randomPin('pinValue')" class="px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-200 transition"><i class="fa-solid fa-dice mr-1"></i>Acak</button>
-                        </div>
-                    </div>
+            <div class="opt-card">
+                <div class="opt-head">
+                    <span class="opt-ic"><i class="fa-solid fa-shield-halved"></i></span>
+                    <div><p class="opt-title">Proteksi Hak Cipta</p><p class="opt-sub">Atur apa yang boleh dilakukan klien terhadap foto Anda.</p></div>
+                </div>
+
+                <p class="opt-group">Perlindungan foto</p>
+                <label class="opt">
+                    <span class="opt-ic"><i class="fa-solid fa-camera-retro"></i></span>
+                    <span class="opt-tx">Anti-Save &amp; Blackout<small>Blokir tahan layar, dan layar menjadi hitam saat Snipping Tool dibuka.</small></span>
+                    <input type="checkbox" id="protCheck" checked class="opt-sw">
+                </label>
+                <label class="opt">
+                    <span class="opt-ic"><i class="fa-solid fa-droplet"></i></span>
+                    <span class="opt-tx">Watermark nama vendor<small>Tampil berulang di atas foto saat klien melihat galeri.</small></span>
+                    <input type="checkbox" id="wmCheck" checked class="opt-sw">
+                </label>
+
+                <p class="opt-group">Akses klien</p>
+                <label class="opt">
+                    <span class="opt-ic"><i class="fa-solid fa-download"></i></span>
+                    <span class="opt-tx">Izinkan klien mengunduh foto<small>Tombol unduh muncul di portal (resolusi asli). Kalau mati, klien hanya melihat &amp; memilih. Bisa diubah lewat tombol Edit.</small></span>
+                    <input type="checkbox" id="dlCheck" class="opt-sw">
+                </label>
+                <label class="opt">
+                    <span class="opt-ic"><i class="fa-solid fa-key"></i></span>
+                    <span class="opt-tx">PIN untuk membuka galeri (opsional)<small>Klien harus memasukkan PIN dulu. Kirim PIN terpisah atau ikut di pesan. Bisa diubah atau dihapus lewat tombol Edit.</small></span>
+                    <input type="checkbox" id="pinCheck" onchange="togglePinField('pinCheck','pinBox','pinValue')" class="opt-sw">
+                </label>
+                <div id="pinBox" class="hidden opt-extra">
+                    <span class="text-[11px] font-bold text-slate-500">PIN</span>
+                    <input id="pinValue" type="text" inputmode="numeric" maxlength="8" placeholder="4–8 angka" class="w-32 text-center font-mono font-bold tracking-widest bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-600">
+                    <button type="button" onclick="randomPin('pinValue')" class="px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-200 transition"><i class="fa-solid fa-dice mr-1"></i>Acak</button>
                 </div>
             </div>
 
@@ -250,7 +278,7 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-solid fa-magnifying-glass text-slate-400 text-xs"></i></div>
                 <input type="search" id="listSearch" oninput="onListFilter()" placeholder="Cari nama klien atau kode..." class="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg focus:border-blue-600 outline-none transition text-sm">
             </div>
-            <div id="filterChips" class="flt-row flex gap-1.5 overflow-x-auto pb-0.5"></div>
+            <div id="filterChips" class="flt-row flex flex-wrap gap-1.5"></div>
         </div>
         <div id="linkList" class="divide-y divide-slate-100 max-h-[30rem] lg:max-h-[calc(100vh-21rem)] overflow-y-auto">
             <p class="p-6 text-sm text-slate-400 text-center">Klik "Muat Daftar" untuk menampilkan link yang pernah dibuat.</p>
