@@ -40,6 +40,8 @@
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
         .photo-card { transition: all 0.2s ease-in-out; }
+        .dl-thumb { display: none; }
+        body.dl-on .dl-thumb { display: flex; }
         .photo-card:active { transform: scale(0.97); }
         .selected-overlay { opacity: 0; transition: opacity 0.2s ease; }
         .photo-card.selected .selected-overlay { opacity: 1; }
@@ -428,8 +430,8 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button id="btnDlAll" onclick="downloadSelectedPhotos()" class="hidden px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition items-center gap-2 shadow-sm" title="Unduh foto pilihan">
-                    <i class="fa-solid fa-download text-lg"></i> <span class="hidden md:inline" data-i18n="btnDlAll">Unduh Foto</span>
+                <button id="btnDlAll" onclick="downloadSelectedPhotos()" class="hidden px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition items-center gap-2 shadow-sm" title="Unduh foto pilihan (ZIP)">
+                    <i class="fa-solid fa-file-zipper text-lg"></i> <span class="hidden md:inline" data-i18n="btnDlAll">Unduh ZIP</span>
                 </button>
                 <button onclick="downloadList()" class="px-4 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-bold rounded-xl transition flex items-center gap-2 border border-slate-300 dark:border-slate-600 shadow-sm" title="Download file .txt">
                     <i class="fa-solid fa-file-arrow-down text-lg"></i> <span class="hidden md:inline" data-i18n="btnDownload">Download List</span>
@@ -1645,7 +1647,7 @@
                 selFooterTitle: "Foto Terpilih",
                 selFooterDesc: "Kirim daftar ini ke tim kami",
                 btnDownload: "Download List",
-                btnDlPhoto: "Unduh Foto", btnDlAll: "Unduh Foto", dlStart: "Mengunduh...", dlFail: "Gagal mengunduh foto. Coba lagi.", dlProgress: "Mengunduh foto", dlDone: "Unduhan selesai",
+                btnDlPhoto: "Unduh Foto", btnDlAll: "Unduh ZIP", dlStart: "Mengunduh...", dlFail: "Gagal mengunduh foto. Coba lagi.", dlProgress: "Mengunduh foto", dlDone: "Unduhan selesai", dlFailedN: "foto gagal", dlTooBig: "ZIP terlalu besar (>4 GB). Pilih lebih sedikit foto per unduhan.",
                 btnWA: "Kirim WA",
                 tutTitle: "Cara Memilih Foto",
                 tutDesc: "Ikuti panduan mudah ini untuk menyeleksi foto favorit Anda:",
@@ -1752,7 +1754,7 @@
                 selFooterTitle: "Selected Photos",
                 selFooterDesc: "Send this list to our team",
                 btnDownload: "Download List",
-                btnDlPhoto: "Download Photo", btnDlAll: "Download Photos", dlStart: "Downloading...", dlFail: "Download failed. Please try again.", dlProgress: "Downloading photo", dlDone: "Download complete",
+                btnDlPhoto: "Download Photo", btnDlAll: "Download ZIP", dlStart: "Downloading...", dlFail: "Download failed. Please try again.", dlProgress: "Downloading photo", dlDone: "Download complete", dlFailedN: "failed", dlTooBig: "ZIP too large (>4 GB). Download fewer photos at a time.",
                 btnWA: "Send via WA",
                 tutTitle: "How to Select Photos",
                 tutDesc: "Follow these simple steps to select your favorite photos:",
@@ -2486,7 +2488,17 @@
                 const targetIndex = appState.viewMode === 'selected' ? index : globalIndex;
                 zoomBtn.onclick = (e) => { e.stopPropagation(); openLightbox(targetIndex); };
 
-                bottomArea.appendChild(nameText); bottomArea.appendChild(zoomBtn);
+                const dlBtn = document.createElement('button');
+                dlBtn.className = `dl-thumb pointer-events-auto text-white bg-black/40 hover:bg-blue-600 ${btnSize} items-center justify-center shadow-lg transition-colors`;
+                dlBtn.setAttribute('aria-label', 'Download');
+                dlBtn.title = 'Unduh foto';
+                dlBtn.innerHTML = '<i class="fa-solid fa-download"></i>';
+                dlBtn.onclick = (e) => { e.stopPropagation(); downloadPhoto(photo, dlBtn); };
+
+                const btnWrap = document.createElement('div');
+                btnWrap.className = 'flex items-center gap-1.5';
+                btnWrap.appendChild(dlBtn); btnWrap.appendChild(zoomBtn);
+                bottomArea.appendChild(nameText); bottomArea.appendChild(btnWrap);
                 card.appendChild(overlay); card.appendChild(bottomArea);
                 frag.appendChild(card);
             });
@@ -2597,6 +2609,7 @@
         // ===== DOWNLOAD FOTO (diizinkan admin per link) =====
         function applyDlMode() {
             const on = !!appState.dlMode;
+            document.body.classList.toggle('dl-on', on);
             const a = document.getElementById('btnDlAll'); if (a) { a.classList.toggle('hidden', !on); a.classList.toggle('flex', on); }
             const b = document.getElementById('lightboxDlBtn'); if (b) { b.classList.toggle('hidden', !on); b.classList.toggle('flex', on); }
         }
@@ -2626,20 +2639,80 @@
             }
             if (btn) btn.disabled = false;
         }
+        // ---- ZIP (tanpa pustaka luar; foto JPEG sudah terkompresi sehingga disimpan apa adanya) ----
+        const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+        function crc32(buf) { let c = 0xFFFFFFFF; for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+        function zipSafeName(n) { return String(n || 'foto.jpg').replace(/[\\:*?"<>|\x00-\x1f]/g, '_').replace(/^\/+/, ''); }
+        function makeZipWriter(sink) {
+            const enc = new TextEncoder(); const entries = []; let offset = 0;
+            const now = new Date();
+            const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+            const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+            const w = async (u8) => { await sink(u8); offset += u8.length; };
+            return {
+                async add(name, data) {
+                    const nm = enc.encode(name), crc = crc32(data), size = data.length;
+                    if (size > 0xFFFFFFF0 || offset > 0xFFFFFF00) throw new Error('zip_too_large');
+                    const h = new DataView(new ArrayBuffer(30));
+                    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+                    h.setUint16(10, dosTime, true); h.setUint16(12, dosDate, true); h.setUint32(14, crc, true);
+                    h.setUint32(18, size, true); h.setUint32(22, size, true); h.setUint16(26, nm.length, true); h.setUint16(28, 0, true);
+                    const start = offset;
+                    await w(new Uint8Array(h.buffer)); await w(nm); await w(data);
+                    entries.push({ nm, crc, size, start });
+                },
+                async finish() {
+                    const cdStart = offset;
+                    for (const e of entries) {
+                        const c = new DataView(new ArrayBuffer(46));
+                        c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+                        c.setUint16(12, dosTime, true); c.setUint16(14, dosDate, true); c.setUint32(16, e.crc, true);
+                        c.setUint32(20, e.size, true); c.setUint32(24, e.size, true); c.setUint16(28, e.nm.length, true);
+                        c.setUint32(42, e.start, true);
+                        await w(new Uint8Array(c.buffer)); await w(e.nm);
+                    }
+                    const cdSize = offset - cdStart;
+                    const t = new DataView(new ArrayBuffer(22));
+                    t.setUint32(0, 0x06054b50, true); t.setUint16(8, entries.length, true); t.setUint16(10, entries.length, true);
+                    t.setUint32(12, cdSize, true); t.setUint32(16, cdStart, true);
+                    await w(new Uint8Array(t.buffer));
+                }
+            };
+        }
         let dlBusy = false;
         async function downloadSelectedPhotos() {
             if (!appState.dlMode || dlBusy || appState.selectedMap.size === 0) return;
             const t = TRANSLATIONS[appState.lang] || TRANSLATIONS.id;
             const list = Array.from(appState.selectedMap.values());
+            const vendor = (CONFIG_APP && CONFIG_APP.namaVendor) ? CONFIG_APP.namaVendor : 'Foto';
+            const zipName = zipSafeName(`Foto Pilihan - ${(appState.clientName || vendor)}`).replace(/\s+/g, '_') + '.zip';
             dlBusy = true;
+            let writable = null; const parts = [];
             try {
-                for (let i = 0; i < list.length; i++) {
-                    showAlert(`${t.dlProgress} ${i + 1}/${list.length}`);
-                    try { saveBlobAs(await fetchPhotoBlob(list[i]), list[i].name); }
-                    catch (e) { window.open(`https://drive.google.com/uc?export=download&id=${encodeURIComponent(list[i].id)}`, '_blank'); }
-                    await new Promise(r => setTimeout(r, 700));
+                if (window.showSaveFilePicker) {
+                    try {
+                        const fh = await window.showSaveFilePicker({ suggestedName: zipName, types: [{ description: 'ZIP', accept: { 'application/zip': ['.zip'] } }] });
+                        writable = await fh.createWritable();
+                    } catch (e) { if (e && e.name === 'AbortError') { dlBusy = false; return; } writable = null; }
                 }
-                showAlert(t.dlDone);
+                const zip = makeZipWriter(async (u8) => { if (writable) await writable.write(u8); else parts.push(u8); });
+                const used = new Set(); let failed = 0;
+                for (let i = 0; i < list.length; i++) {
+                    const ph = list[i];
+                    showAlert(`${t.dlProgress} ${i + 1}/${list.length}`);
+                    let name = zipSafeName((ph.folderName ? ph.folderName + '/' : '') + ph.name);
+                    if (used.has(name.toLowerCase())) { const dot = name.lastIndexOf('.'); let n = 2, cand; do { cand = dot > 0 ? `${name.slice(0, dot)} (${n})${name.slice(dot)}` : `${name} (${n})`; n++; } while (used.has(cand.toLowerCase())); name = cand; }
+                    used.add(name.toLowerCase());
+                    try { const blob = await fetchPhotoBlob(ph); await zip.add(name, new Uint8Array(await blob.arrayBuffer())); }
+                    catch (e) { if (e && e.message === 'zip_too_large') throw e; failed++; }
+                }
+                await zip.finish();
+                if (writable) { await writable.close(); writable = null; }
+                else saveBlobAs(new Blob(parts, { type: 'application/zip' }), zipName);
+                showAlert(failed ? `${t.dlDone} (${failed} ${t.dlFailedN})` : t.dlDone, failed ? 'error' : 'success');
+            } catch (e) {
+                try { if (writable) await writable.abort(); } catch (_) {}
+                showAlert(e && e.message === 'zip_too_large' ? t.dlTooBig : t.dlFail, 'error');
             } finally { dlBusy = false; }
         }
 
