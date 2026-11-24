@@ -513,6 +513,11 @@
     </div>
 
     <!-- LIGHTBOX ZOOM -->
+    <!-- Banner mode tes (hanya muncul saat vendor membuka link dari panel dengan &preview=1) -->
+    <div id="previewBanner" class="hidden fixed top-0 inset-x-0 z-[95] bg-amber-500 text-white text-center text-[11px] sm:text-xs font-bold px-3 py-1.5 shadow-md">
+        <i class="fa-solid fa-flask mr-1"></i> <span data-i18n="previewBanner">MODE TES: pilihan tidak disimpan dan tidak dikirim ke klien.</span>
+    </div>
+
     <!-- Layar PIN (hanya muncul jika admin memasang PIN pada link) -->
     <div id="pinGate" class="hidden fixed inset-0 z-[90] items-center justify-center p-4 bg-slate-100 dark:bg-slate-900">
         <form id="pinForm" onsubmit="submitPin(event)" class="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 text-center">
@@ -567,6 +572,7 @@
             viewMode: 'all', sortOrder: 'default', lang: 'id',
             gridMode: 2,
             wmMode: false, protMode: false, dlMode: false,
+            preview: new URLSearchParams(location.search).get('preview') === '1',   // mode tes vendor: tidak menyimpan / mengirim apa pun
             deadline: null,        // epoch ms batas waktu memilih (null = tanpa batas)
             timeOffset: 0,         // selisih jam server - jam perangkat (ms)
             lockedNotified: false,
@@ -957,7 +963,7 @@
         // Klien menekan selesai: beri tahu server (catat waktu, progres -> dikirim, email ke admin)
         function notifySubmitted() {
             const r = appState.remote;
-            if (!r) return;
+            if (!r || appState.preview) return;
             const dir = location.href.split('?')[0].split('#')[0].replace(/[^/]*$/, '');
             serverCall('POST', { action: 'submit', c: r.code, admin: dir + 'generatorLink.html' }).then(res => {
                 if (res && res.ok && res.progres) { appState.progres = res.progres; renderProgress(); }
@@ -1194,7 +1200,7 @@
 
         async function loadRemoteConfig(code) {
             const t0 = Date.now();
-            const data = await serverCall('GET', { action: 'get', c: code });
+            const data = await serverCall('GET', appState.preview ? { action: 'get', c: code, preview: '1' } : { action: 'get', c: code });
             const t1 = Date.now();
             if (!data || !data.ok) {
                 const err = new Error((data && data.error) || 'server');
@@ -1435,7 +1441,7 @@
 
         function scheduleRemoteSave(delay = 900) {
             const r = appState.remote;
-            if (!r || isLocked()) return;
+            if (!r || isLocked() || appState.preview) return;
             r.rev++;
             try { localStorage.setItem(pendingKey(), '1'); } catch (e) {}
             setSyncStatus('pending');
@@ -1444,6 +1450,7 @@
         }
 
         async function flushRemoteSave() {
+            if (appState.preview) return;
             const r = appState.remote;
             if (!r || !hasPending()) return;
             if (isLocked()) { try { localStorage.removeItem(pendingKey()); } catch (e) {} return; }
@@ -1506,7 +1513,7 @@
 
         function beaconSave() {
             const r = appState.remote;
-            if (!r || !hasPending() || isLocked() || !navigator.sendBeacon) return;
+            if (!r || appState.preview || !hasPending() || isLocked() || !navigator.sendBeacon) return;
             try {
                 navigator.sendBeacon(serverUrl(), new Blob([JSON.stringify({ action: 'save', c: r.code, selected: remotePayload(), base: baseForServer(), pin: storedPin(r.code) })], { type: 'text/plain;charset=utf-8' }));
             } catch (e) {}
@@ -1535,7 +1542,7 @@
 
         async function pingPresence() {
             const r = appState.remote;
-            if (!r || r.presenceOff || r.pinging || document.hidden) return;
+            if (!r || appState.preview || r.presenceOff || r.pinging || document.hidden) return;
             r.pinging = true;
             try {
                 const res = await serverCall('POST', { action: 'presence', c: r.code, id: myDeviceId(), rev: r.selRev || '' }, 10000);
@@ -1795,6 +1802,7 @@
                 errNetwork: "Gagal terhubung ke Google Drive. Periksa koneksi internet Anda.",
                 errEmpty: "Folder kosong atau hak akses bukan Publik.",
                 listDeadline: "Batas Pilih : {date}",
+                previewBanner: "MODE TES: pilihan tidak disimpan dan tidak dikirim ke klien.",
                 pinTitle: "Galeri ini dilindungi PIN", pinHint: "Masukkan PIN yang dikirim oleh fotografer.", pinBtn: "Buka Galeri", pinHello: "Halo, {name}", pinWrong: "PIN salah. Sisa percobaan: {left}.", pinLocked: "Terlalu banyak percobaan. Coba lagi sekitar {min} menit lagi.", pinShort: "PIN terdiri dari 4–8 angka.", pinChecking: "Memeriksa...",
                 listLocked: "Status    : Melewati batas waktu - sisa foto dipilihkan fotografer",
                 gridTip: "Ubah Baris Foto",
@@ -1903,6 +1911,7 @@
                 errNetwork: "Could not reach Google Drive. Please check your connection.",
                 errEmpty: "The folder is empty or not shared publicly.",
                 listDeadline: "Deadline  : {date}",
+                previewBanner: "TEST MODE: selections are not saved or sent to the client.",
                 pinTitle: "This gallery is PIN-protected", pinHint: "Enter the PIN sent by your photographer.", pinBtn: "Open Gallery", pinHello: "Hello, {name}", pinWrong: "Wrong PIN. Attempts left: {left}.", pinLocked: "Too many attempts. Please try again in about {min} minutes.", pinShort: "The PIN is 4–8 digits.", pinChecking: "Checking...",
                 listLocked: "Status    : Past deadline - remaining photos chosen by the photographer",
                 gridTip: "Change Grid Rows",
@@ -2704,6 +2713,14 @@
             }
             if (count > 0) { bar.classList.remove('translate-y-full'); } else { bar.classList.add('translate-y-full'); }
         }
+
+        // ===== MODE TES VENDOR =====
+        function applyPreviewMode() {
+            if (!appState.preview) return;
+            const b = document.getElementById('previewBanner'); if (b) b.classList.remove('hidden');
+            document.body.style.paddingTop = '28px';
+        }
+        document.addEventListener('DOMContentLoaded', applyPreviewMode);
 
         // ===== DOWNLOAD FOTO (diizinkan admin per link) =====
         function applyDlMode() {
